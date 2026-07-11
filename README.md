@@ -19,8 +19,11 @@ Luma is designed to feel like a page, not a dashboard. It keeps the interface re
 - Optional per-document word goals
 - Writing prompts
 - Find and replace
+- Smooth Web Audio typing sounds with Butter, Deep Thock, and Felt presets
 - Six color palettes, each with light and dark variants
-- Smooth Web Audio typing sounds with Butter, Deep thock, and Felt presets
+- Local music queue with shuffle, repeat, seeking, and focus-mode controls
+- Official YouTube playback from pasted links without an API key
+- Optional in-app YouTube search using a browser-restricted YouTube Data API key
 
 ### Document library
 
@@ -30,14 +33,6 @@ Luma is designed to feel like a page, not a dashboard. It keeps the interface re
 - Word counts and last-edited times in the library
 - Automatic migration from the earlier single-document version
 
-### Music queue
-
-- Add multiple audio files from your device
-- Play, pause, seek, skip, shuffle, and repeat
-- Reorder or remove tracks from the queue
-- Compact music controls remain available in focus mode
-- Music files stay on the device and are never uploaded
-
 ### Import, export, and safety
 
 - Automatic local saving
@@ -46,7 +41,7 @@ Luma is designed to feel like a page, not a dashboard. It keeps the interface re
 - Export every document and preference as a portable JSON backup
 - Restore a complete Luma backup in another browser
 
-Luma does not send document content or music to a server. Writing and preferences remain in the browser's `localStorage` unless the user explicitly exports a file. Music queues are session-only because browsers do not allow websites to silently reopen local audio files after a refresh.
+Luma does not send document content to a server. Writing and preferences remain in the browser's `localStorage` unless the user explicitly exports a file.
 
 ## Keyboard shortcuts
 
@@ -84,8 +79,18 @@ npm run preview
 - Lucide icons
 - Plain CSS
 
-No backend, account system, analytics SDK, database, or bundled audio library is required. Typing sounds are synthesized locally with the Web Audio API.
+No backend, account system, analytics SDK, or database is required. YouTube links use the official embedded player. In-app YouTube search is optional and uses a YouTube Data API key stored only in the browser.
 
 ## Local data
 
 Luma stores data under the browser origin where the app is opened. Clearing site data removes locally stored documents. Use **Export local backup** from the document menu to keep important work safe or move it between browsers.
+
+## YouTube search setup
+
+Pasted YouTube links work immediately. To search YouTube inside Luma:
+
+1. Create a Google Cloud project and enable **YouTube Data API v3**.
+2. Create an API key and restrict it to HTTP referrers for your Luma domain.
+3. Open Luma's music panel, choose **YouTube**, and save the key under **Enable in-app YouTube search**.
+
+The API key remains in that browser's local storage and is sent only to Google's YouTube Data API.
