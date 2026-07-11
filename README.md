@@ -2,7 +2,7 @@
 
 A quiet, distraction-free writing space for essays, poems, and everything in between.
 
-**Live app:** https://luma-xtofuubs-projects.vercel.app
+**Live app:** https://luma-one-theta.vercel.app
 
 ## About
 
