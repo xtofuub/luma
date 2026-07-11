@@ -21,9 +21,9 @@ Luma is designed to feel like a page, not a dashboard. It keeps the interface re
 - Find and replace
 - Smooth Web Audio typing sounds with Butter, Deep Thock, and Felt presets
 - Six color palettes, each with light and dark variants
-- Local music queue with shuffle, repeat, seeking, and focus-mode controls
-- Official YouTube playback from pasted links without an API key
-- Optional in-app YouTube search using a browser-restricted YouTube Data API key
+- YouTube-first mini player with pasted-link playback, queue controls, seeking, shuffle, repeat, and focus-mode controls
+- YouTube, YouTube Music, Shorts, and `youtu.be` links work without an API key
+- Optional local audio queue for files from the current device
 
 ### Document library
 
@@ -79,18 +79,12 @@ npm run preview
 - Lucide icons
 - Plain CSS
 
-No backend, account system, analytics SDK, or database is required. YouTube links use the official embedded player. In-app YouTube search is optional and uses a YouTube Data API key stored only in the browser.
+No backend, account system, analytics SDK, database, or YouTube API key is required. YouTube links use the official embedded player.
 
 ## Local data
 
 Luma stores data under the browser origin where the app is opened. Clearing site data removes locally stored documents. Use **Export local backup** from the document menu to keep important work safe or move it between browsers.
 
-## YouTube search setup
+## YouTube mini player
 
-Pasted YouTube links work immediately. To search YouTube inside Luma:
-
-1. Create a Google Cloud project and enable **YouTube Data API v3**.
-2. Create an API key and restrict it to HTTP referrers for your Luma domain.
-3. Open Luma's music panel, choose **YouTube**, and save the key under **Enable in-app YouTube search**.
-
-The API key remains in that browser's local storage and is sent only to Google's YouTube Data API.
+Open the music control, paste a YouTube, YouTube Music, Shorts, or `youtu.be` link, and add it to the queue. Playback uses YouTube's official embedded player and does not require an API key. Local audio files remain available as the secondary source.
