@@ -19,9 +19,8 @@ Luma is designed to feel like a page, not a dashboard. It keeps the interface re
 - Optional per-document word goals
 - Writing prompts
 - Find and replace
-- Optional Web Audio typing sounds
-- Soft, mechanical, and typewriter sound presets
-- Adjustable typing sound volume with instant preview
+- Six color palettes, each with light and dark variants
+- Smooth Web Audio typing sounds with Butter, Deep thock, and Felt presets
 
 ### Document library
 
@@ -31,6 +30,14 @@ Luma is designed to feel like a page, not a dashboard. It keeps the interface re
 - Word counts and last-edited times in the library
 - Automatic migration from the earlier single-document version
 
+### Music queue
+
+- Add multiple audio files from your device
+- Play, pause, seek, skip, shuffle, and repeat
+- Reorder or remove tracks from the queue
+- Compact music controls remain available in focus mode
+- Music files stay on the device and are never uploaded
+
 ### Import, export, and safety
 
 - Automatic local saving
@@ -39,7 +46,7 @@ Luma is designed to feel like a page, not a dashboard. It keeps the interface re
 - Export every document and preference as a portable JSON backup
 - Restore a complete Luma backup in another browser
 
-Luma does not send document content to a server. Writing and preferences remain in the browser's `localStorage` unless the user explicitly exports a file.
+Luma does not send document content or music to a server. Writing and preferences remain in the browser's `localStorage` unless the user explicitly exports a file. Music queues are session-only because browsers do not allow websites to silently reopen local audio files after a refresh.
 
 ## Keyboard shortcuts
 
@@ -77,7 +84,7 @@ npm run preview
 - Lucide icons
 - Plain CSS
 
-No backend, account system, analytics SDK, database, or bundled audio files are required. Typing sounds are generated locally with the Web Audio API.
+No backend, account system, analytics SDK, database, or bundled audio library is required. Typing sounds are synthesized locally with the Web Audio API.
 
 ## Local data
 
