@@ -19,6 +19,9 @@ Luma is designed to feel like a page, not a dashboard. It keeps the interface re
 - Optional per-document word goals
 - Writing prompts
 - Find and replace
+- Optional Web Audio typing sounds
+- Soft, mechanical, and typewriter sound presets
+- Adjustable typing sound volume with instant preview
 
 ### Document library
 
@@ -74,7 +77,7 @@ npm run preview
 - Lucide icons
 - Plain CSS
 
-No backend, account system, analytics SDK, or database is required.
+No backend, account system, analytics SDK, database, or bundled audio files are required. Typing sounds are generated locally with the Web Audio API.
 
 ## Local data
 
