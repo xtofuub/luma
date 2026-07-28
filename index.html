@@ -15,6 +15,11 @@
     <script type="module" src="/src/main.tsx"></script>
     <script src="/typing-sounds.js" defer></script>
     <script src="/music-player-v2.js" defer></script>
+    <script>
+      if (!localStorage.getItem('luma-spotify-token-v1')) {
+        localStorage.setItem('luma-spotify-token-v1', '__disconnected__');
+      }
+    </script>
     <script src="/ux-improvements.js" defer></script>
   </body>
 </html>
