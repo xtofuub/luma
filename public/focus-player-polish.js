@@ -57,7 +57,7 @@
     syncFocusModeClass();
     if (!focusPlayer || focusPlayer.hidden || enhancing) return;
 
-    if (!focusPlayer.classList.contains('luma-focus-polished')) {
+    if (!focusPlayer.querySelector('.luma-focus-artwork')) {
       const previous = focusPlayer.querySelector('[data-action="previous"]');
       const play = focusPlayer.querySelector('[data-action="toggle-play"]');
       const next = focusPlayer.querySelector('[data-action="next"]');
