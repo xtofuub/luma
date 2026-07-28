@@ -4,7 +4,7 @@ A quiet, local-first writing space for essays, poems, notes, and long-form draft
 
 **Live app:** https://luma-one-theta.vercel.app
 
-Luma is designed to feel like a page, not a dashboard. It keeps the interface restrained while providing the practical tools needed to manage and protect real writing projects.
+Luma is designed to feel like a page, not a dashboard. It keeps the interface restrained while providing the practical tools needed to manage writing projects and listen to a private local music library.
 
 ## Features
 
@@ -21,9 +21,23 @@ Luma is designed to feel like a page, not a dashboard. It keeps the interface re
 - Find and replace
 - Smooth Web Audio typing sounds with Butter, Deep Thock, and Felt presets
 - Six color palettes, each with light and dark variants
-- YouTube-first mini player with pasted-link playback, queue controls, seeking, shuffle, repeat, and focus-mode controls
-- YouTube, YouTube Music, Shorts, and `youtu.be` links work without an API key
-- Optional local audio queue for files from the current device
+- Configurable library, document-detail, and writing-stat panels
+
+### Local music library
+
+- Import individual audio files or an entire folder
+- Drag and drop audio files into the player
+- Search imported tracks by title or artist
+- Persistent browser storage using IndexedDB
+- Create, rename, play, shuffle, and delete playlists
+- Add and remove tracks from playlists
+- Queue tracks and reorder what plays next
+- Play, pause, previous, next, seek, volume, shuffle, repeat-all, and repeat-one controls
+- Compact music controls remain available in focus mode
+- Browser Media Session support for operating-system media controls
+- Duplicate-file detection during import
+
+Supported browser-playable formats include MP3, WAV, FLAC, M4A, AAC, OGG, Opus, and WebM audio. Actual codec support depends on the browser.
 
 ### Document library
 
@@ -41,7 +55,7 @@ Luma is designed to feel like a page, not a dashboard. It keeps the interface re
 - Export every document and preference as a portable JSON backup
 - Restore a complete Luma backup in another browser
 
-Luma does not send document content to a server. Writing and preferences remain in the browser's `localStorage` unless the user explicitly exports a file.
+Luma does not send document content or imported music to a server. Writing and preferences use browser storage, while music files use IndexedDB on the current browser and origin.
 
 ## Keyboard shortcuts
 
@@ -78,15 +92,10 @@ npm run preview
 - Vite
 - Lucide icons
 - Plain CSS
+- IndexedDB and the browser Audio API
 
-No backend, account system, analytics SDK, database, or YouTube API key is required. YouTube links use the official embedded player.
+No backend, account system, analytics SDK, streaming-service login, or API key is required.
 
 ## Local data
 
-Luma stores data under the browser origin where the app is opened. Clearing site data removes locally stored documents. Use **Export local backup** from the document menu to keep important work safe or move it between browsers.
-
-## YouTube mini player
-
-Open the music control, paste a YouTube, YouTube Music, Shorts, or `youtu.be` link, and add it to the queue. Playback uses YouTube's official embedded player and does not require an API key. Local audio files remain available as the secondary source.
-
-<!-- Vercel deployment trigger: 2026-07-28 -->
+Luma stores data under the browser origin where the app is opened. Clearing site data removes locally stored documents, settings, playlists, and imported music. Use **Export local backup** from the document menu to protect writing; imported audio should also remain available in its original folder.
