@@ -1,12 +1,94 @@
-/* Configurable panels and repaired focus mode. */
+/* Configurable panels, centered writing canvas, and stable focus mode. */
 .active-control { color: var(--text); background: var(--hover); }
 .view-popover { width: 224px; }
 .view-popover > p { margin: 5px 10px 7px; color: var(--faint); font-size: 9px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; }
 .view-toggle { justify-content: flex-start; }
 .toggle-mark { width: 17px; height: 17px; border: 1px solid var(--line); border-radius: 5px; display: grid; place-items: center; color: var(--paper); }
 .toggle-mark.enabled { border-color: var(--accent); background: var(--accent); }
-.page-layout.library-hidden { grid-template-columns: minmax(0, 760px); }
 .title-field.details-hidden { margin-top: 0; }
+
+/* Keep the writing page in the true center of the workspace on wide screens. */
+@media (min-width: 1309px) {
+  .app:not(.focus-mode) .page-layout {
+    width: min(1440px, calc(100% - 48px));
+    grid-template-columns: minmax(250px, 1fr) minmax(0, 760px) minmax(250px, 1fr);
+    justify-content: stretch;
+    gap: 0;
+  }
+
+  .app:not(.focus-mode) .page-layout .library-panel {
+    grid-column: 1;
+    grid-row: 1;
+    width: min(250px, calc(100% - 24px));
+    margin-right: 24px;
+    justify-self: end;
+  }
+
+  .app:not(.focus-mode) .page-layout .writing-page {
+    grid-column: 2;
+    grid-row: 1;
+    width: 100%;
+  }
+
+  .app:not(.focus-mode) .page-layout.library-hidden,
+  html.luma-hide-library .app:not(.focus-mode) .page-layout {
+    width: min(760px, calc(100% - 48px));
+    grid-template-columns: minmax(0, 760px);
+    justify-content: center;
+  }
+}
+
+/* Before the side column becomes cramped, use the existing slide-over library. */
+@media (min-width: 901px) and (max-width: 1308px) {
+  .library-toggle { display: inline-flex; }
+
+  .page-layout,
+  .page-layout.library-hidden,
+  html.luma-hide-library .page-layout {
+    width: min(760px, calc(100% - 48px));
+    grid-template-columns: 1fr;
+    justify-content: center;
+    gap: 0;
+  }
+
+  .writing-page { grid-column: 1; }
+
+  .library-panel {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 60;
+    width: min(310px, calc(100% - 42px));
+    height: 100vh;
+    height: 100dvh;
+    min-height: 0;
+    margin: 0;
+    border-width: 0 1px 0 0;
+    border-radius: 0;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(-102%);
+    box-shadow: 18px 0 50px rgba(0, 0, 0, .12);
+  }
+
+  .library-panel.open {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateX(0);
+  }
+
+  .library-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    display: block;
+    background: rgba(18, 18, 16, .35);
+    backdrop-filter: blur(2px);
+  }
+}
+
+.page-layout.library-hidden,
+html.luma-hide-library .page-layout { justify-content: center; }
 
 .app.focus-mode {
   position: fixed;
@@ -50,13 +132,13 @@
 html.luma-hide-library .library-panel,
 html.luma-hide-library .library-backdrop,
 html.luma-hide-library .library-toggle { display: none !important; }
-html.luma-hide-library .page-layout { grid-template-columns: minmax(0, 760px); }
 html.luma-hide-details .page-meta { display: none !important; }
 html.luma-hide-details .title-field { margin-top: 0; }
 html.luma-hide-stats .document-stats { display: none !important; }
 
 @media (max-width: 900px) {
-  .page-layout.library-hidden, html.luma-hide-library .page-layout { grid-template-columns: 1fr; }
+  .page-layout.library-hidden,
+  html.luma-hide-library .page-layout { grid-template-columns: 1fr; }
   .app.focus-mode .writing-page { padding: 60px 54px 28px; }
 }
 @media (max-width: 560px) {
