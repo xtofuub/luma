@@ -72,22 +72,25 @@
     });
   }
 
-  function createHeaderControls() {
+  function restoreCloseButton() {
     if (!header) return;
-    const originalClose = header.querySelector('[data-action="close-drawer"]');
-    if (originalClose) originalClose.hidden = true;
 
-    let controls = header.querySelector('.luma-panel-mode-controls');
-    if (!controls) {
-      controls = document.createElement('div');
-      controls.className = 'luma-panel-mode-controls';
-      controls.setAttribute('aria-label', 'Music panel display');
-      controls.innerHTML = `
-        <button type="button" data-music-panel-mode="expanded" aria-label="Keep music panel open" title="Expanded panel">${icon('expand')}</button>
-        <button type="button" data-music-panel-mode="hidden" aria-label="Hide music panel" title="Hide panel">${icon('hide')}</button>`;
-      header.appendChild(controls);
-    }
-    controls.querySelectorAll('[data-music-panel-mode]').forEach(bindModeButton);
+    header.querySelector('.luma-panel-mode-controls')?.remove();
+    const closeButton = header.querySelector('[data-action="close-drawer"]');
+    if (!closeButton) return;
+
+    closeButton.hidden = false;
+    closeButton.removeAttribute('hidden');
+    closeButton.title = 'Hide music panel';
+    closeButton.setAttribute('aria-label', 'Hide music panel');
+
+    if (closeButton.dataset.musicCloseBound === 'true') return;
+    closeButton.dataset.musicCloseBound = 'true';
+    closeButton.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      setMode('hidden');
+    }, true);
   }
 
   function injectSettingsControls() {
@@ -133,7 +136,7 @@
     if (!drawer || !shell || !header) return false;
 
     removeBackdrop();
-    createHeaderControls();
+    restoreCloseButton();
     bindTrigger();
     injectSettingsControls();
     applyMode();
@@ -141,6 +144,7 @@
     if (!drawerObserver) {
       drawerObserver = new MutationObserver(() => {
         removeBackdrop();
+        restoreCloseButton();
         injectSettingsControls();
         updateModeButtons();
       });
