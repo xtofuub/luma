@@ -1,15 +1,18 @@
 (() => {
   'use strict';
 
-  const MODE_KEY = 'luma-music-panel-mode-v1';
+  const MODE_KEY = 'luma-music-panel-mode-v2';
   const MODES = new Set(['expanded', 'mini', 'hidden']);
-  const BODY_CLASSES = ['luma-music-mode-expanded', 'luma-music-mode-mini', 'luma-music-mode-hidden'];
+  const MODE_CLASSES = ['luma-music-mode-expanded', 'luma-music-mode-mini', 'luma-music-mode-hidden'];
 
-  let mode = MODES.has(localStorage.getItem(MODE_KEY)) ? localStorage.getItem(MODE_KEY) : 'expanded';
+  let mode = MODES.has(localStorage.getItem(MODE_KEY))
+    ? localStorage.getItem(MODE_KEY)
+    : 'expanded';
   let drawer = null;
   let shell = null;
   let header = null;
-  let settingsObserver = null;
+  let drawerObserver = null;
+  let connectObserver = null;
 
   const ICONS = {
     expand: '<path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"/><path d="m3 8 6-6M21 8l-6-6M3 16l6 6M21 16l-6 6"/>',
@@ -21,87 +24,116 @@
     return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name] || ''}</svg>`;
   }
 
-  function setBodyMode() {
-    document.body.classList.remove(...BODY_CLASSES);
-    document.body.classList.add(`luma-music-mode-${mode}`);
-    document.body.dataset.musicPanelMode = mode;
-
-    if (mode === 'hidden') document.body.classList.remove('luma-music-open');
-    else document.body.classList.add('luma-music-open');
+  function removeBackdrop() {
+    document.querySelectorAll('.luma-music-backdrop').forEach((node) => node.remove());
   }
 
-  function updateUi() {
-    setBodyMode();
-
-    if (shell) {
-      const trigger = shell.querySelector('.luma-youtube-trigger');
-      if (trigger) {
-        trigger.setAttribute('aria-expanded', String(mode !== 'hidden'));
-        trigger.title = mode === 'hidden' ? 'Show music panel' : 'Music panel';
-      }
-    }
-
-    if (header) {
-      const subtitle = header.querySelector(':scope > div > div > small');
-      if (subtitle) subtitle.textContent = mode === 'expanded' ? 'YouTube player · Expanded' : mode === 'mini' ? 'Mini player' : 'YouTube player';
-    }
-
+  function updateModeButtons() {
     document.querySelectorAll('[data-music-panel-mode]').forEach((button) => {
       const active = button.dataset.musicPanelMode === mode;
       button.classList.toggle('active', active);
       button.setAttribute('aria-pressed', String(active));
     });
+  }
 
-    injectSettingsControls();
+  function applyMode() {
+    document.body.classList.remove(...MODE_CLASSES, 'luma-music-open');
+    document.body.classList.add(`luma-music-mode-${mode}`);
+    document.body.dataset.musicPanelMode = mode;
+    removeBackdrop();
+
+    const trigger = shell?.querySelector('.luma-youtube-trigger');
+    if (trigger) {
+      trigger.setAttribute('aria-expanded', String(mode !== 'hidden'));
+      trigger.title = mode === 'hidden' ? 'Show music panel' : 'Music panel';
+    }
+
+    const subtitle = header?.querySelector(':scope > div > div > small');
+    if (subtitle) {
+      subtitle.textContent = mode === 'expanded'
+        ? 'YouTube player · Expanded'
+        : mode === 'mini'
+          ? 'Mini player'
+          : 'YouTube player';
+    }
+
+    updateModeButtons();
   }
 
   function setMode(nextMode, persist = true) {
     if (!MODES.has(nextMode)) return;
     mode = nextMode;
     if (persist) localStorage.setItem(MODE_KEY, mode);
-    updateUi();
+    applyMode();
     window.dispatchEvent(new CustomEvent('luma:music-panel-mode', { detail: { mode } }));
   }
 
+  function bindModeButton(button) {
+    if (button.dataset.musicModeBound === 'true') return;
+    button.dataset.musicModeBound = 'true';
+    button.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      setMode(button.dataset.musicPanelMode);
+    });
+  }
+
   function createHeaderControls() {
-    if (!header || header.querySelector('.luma-panel-mode-controls')) return;
+    if (!header) return;
 
     const originalClose = header.querySelector('[data-action="close-drawer"]');
     if (originalClose) originalClose.hidden = true;
 
-    const controls = document.createElement('div');
-    controls.className = 'luma-panel-mode-controls';
-    controls.setAttribute('aria-label', 'Music panel display');
-    controls.innerHTML = `
-      <button type="button" data-music-panel-mode="expanded" aria-label="Expand music panel" title="Expanded panel">${icon('expand')}</button>
-      <button type="button" data-music-panel-mode="mini" aria-label="Minimize music panel" title="Mini player">${icon('mini')}</button>
-      <button type="button" data-music-panel-mode="hidden" aria-label="Hide music panel" title="Hide panel">${icon('hide')}</button>`;
-    header.appendChild(controls);
+    let controls = header.querySelector('.luma-panel-mode-controls');
+    if (!controls) {
+      controls = document.createElement('div');
+      controls.className = 'luma-panel-mode-controls';
+      controls.setAttribute('aria-label', 'Music panel display');
+      controls.innerHTML = `
+        <button type="button" data-music-panel-mode="expanded" aria-label="Expand music panel" title="Expanded panel">${icon('expand')}</button>
+        <button type="button" data-music-panel-mode="mini" aria-label="Minimize music panel" title="Mini player">${icon('mini')}</button>
+        <button type="button" data-music-panel-mode="hidden" aria-label="Hide music panel" title="Hide panel">${icon('hide')}</button>`;
+      header.appendChild(controls);
+    }
+
+    controls.querySelectorAll('[data-music-panel-mode]').forEach(bindModeButton);
   }
 
   function injectSettingsControls() {
     const settings = drawer?.querySelector('.luma-youtube-settings');
-    if (!settings || settings.querySelector('.luma-panel-display-settings')) return;
+    if (!settings) return;
 
-    const section = document.createElement('section');
-    section.className = 'luma-panel-display-settings';
-    section.innerHTML = `
-      <div class="luma-settings-title">
-        ${icon('expand', 17)}
-        <div><strong>Music panel display</strong><small>Choose how the player appears while you write.</small></div>
-      </div>
-      <div class="luma-panel-mode-picker" role="group" aria-label="Music panel display mode">
-        <button type="button" data-music-panel-mode="expanded"><span>${icon('expand', 15)}</span><strong>Expanded</strong><small>Full right panel</small></button>
-        <button type="button" data-music-panel-mode="mini"><span>${icon('mini', 15)}</span><strong>Mini</strong><small>Now playing controls</small></button>
-        <button type="button" data-music-panel-mode="hidden"><span>${icon('hide', 15)}</span><strong>Hidden</strong><small>Show only the music button</small></button>
-      </div>`;
-    settings.prepend(section);
+    let section = settings.querySelector('.luma-panel-display-settings');
+    if (!section) {
+      section = document.createElement('section');
+      section.className = 'luma-panel-display-settings';
+      section.innerHTML = `
+        <div class="luma-settings-title">
+          ${icon('expand', 17)}
+          <div><strong>Music panel display</strong><small>Choose how the player appears while you write.</small></div>
+        </div>
+        <div class="luma-panel-mode-picker" role="group" aria-label="Music panel display mode">
+          <button type="button" data-music-panel-mode="expanded"><span>${icon('expand', 15)}</span><strong>Expanded</strong><small>Full right panel</small></button>
+          <button type="button" data-music-panel-mode="mini"><span>${icon('mini', 15)}</span><strong>Mini</strong><small>Now playing controls</small></button>
+          <button type="button" data-music-panel-mode="hidden"><span>${icon('hide', 15)}</span><strong>Hidden</strong><small>Show only the music button</small></button>
+        </div>`;
+      settings.prepend(section);
+    }
 
-    section.querySelectorAll('[data-music-panel-mode]').forEach((button) => {
-      const active = button.dataset.musicPanelMode === mode;
-      button.classList.toggle('active', active);
-      button.setAttribute('aria-pressed', String(active));
-    });
+    section.querySelectorAll('[data-music-panel-mode]').forEach(bindModeButton);
+    updateModeButtons();
+  }
+
+  function bindTrigger() {
+    const trigger = shell?.querySelector('.luma-youtube-trigger');
+    if (!trigger || trigger.dataset.musicModeBound === 'true') return;
+    trigger.dataset.musicModeBound = 'true';
+    trigger.addEventListener('click', (event) => {
+      if (mode !== 'hidden') return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      setMode('expanded');
+    }, true);
   }
 
   function connect() {
@@ -110,56 +142,40 @@
     header = drawer?.querySelector('.luma-music-header') || null;
     if (!drawer || !shell || !header) return false;
 
+    removeBackdrop();
     createHeaderControls();
-    updateUi();
+    bindTrigger();
+    injectSettingsControls();
+    applyMode();
 
-    if (!settingsObserver) {
-      settingsObserver = new MutationObserver(() => {
+    if (!drawerObserver) {
+      drawerObserver = new MutationObserver(() => {
+        removeBackdrop();
         injectSettingsControls();
-        document.querySelectorAll('[data-music-panel-mode]').forEach((button) => {
-          const active = button.dataset.musicPanelMode === mode;
-          button.classList.toggle('active', active);
-          button.setAttribute('aria-pressed', String(active));
-        });
+        updateModeButtons();
       });
-      settingsObserver.observe(drawer, { childList: true, subtree: true });
+      drawerObserver.observe(drawer, { childList: true, subtree: true });
     }
+
     return true;
   }
-
-  document.addEventListener('click', (event) => {
-    const modeButton = event.target.closest('[data-music-panel-mode]');
-    if (modeButton) {
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      setMode(modeButton.dataset.musicPanelMode);
-      return;
-    }
-
-    const trigger = event.target.closest('.luma-youtube-trigger');
-    if (trigger && mode === 'hidden') {
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      setMode('expanded');
-    }
-  }, true);
-
-  document.addEventListener('keydown', (event) => {
-    if (event.key !== 'Escape' || mode === 'hidden') return;
-    queueMicrotask(() => document.body.classList.add('luma-music-open'));
-  });
 
   window.addEventListener('storage', (event) => {
     if (event.key === MODE_KEY && MODES.has(event.newValue)) setMode(event.newValue, false);
   });
 
-  new MutationObserver(() => {
+  connectObserver = new MutationObserver(() => {
+    removeBackdrop();
     if (!drawer?.isConnected || !shell?.isConnected) connect();
-  }).observe(document.documentElement, { childList: true, subtree: true });
+  });
+  connectObserver.observe(document.documentElement, { childList: true, subtree: true });
 
-  setBodyMode();
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', connect, { once: true });
-  else connect();
+  removeBackdrop();
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', connect, { once: true });
+  } else {
+    connect();
+  }
 
   window.LumaMusicPanel = Object.freeze({
     getMode: () => mode,
