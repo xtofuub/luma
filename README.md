@@ -88,3 +88,5 @@ Luma stores data under the browser origin where the app is opened. Clearing site
 ## YouTube mini player
 
 Open the music control, paste a YouTube, YouTube Music, Shorts, or `youtu.be` link, and add it to the queue. Playback uses YouTube's official embedded player and does not require an API key. Local audio files remain available as the secondary source.
+
+<!-- Vercel deployment trigger: 2026-07-28 -->
