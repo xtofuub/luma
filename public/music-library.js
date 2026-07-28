@@ -1,32 +1,39 @@
 (() => {
   'use strict';
 
-  const STATE_KEY = 'luma-online-music-state-v1';
-  const PLAYLISTS_KEY = 'luma-online-music-playlists-v1';
+  const STATE_KEY = 'luma-youtube-music-state-v4';
+  const PLAYLISTS_KEY = 'luma-youtube-playlists-v2';
+  const API_KEY_KEY = 'luma-youtube-api-key-v2';
   const SETTINGS_KEY = 'luma-ambience-settings-v2';
-  const audio = new Audio();
-  audio.preload = 'metadata';
 
   let shell;
-  let popover;
+  let drawer;
+  let backdrop;
+  let content;
   let focusPlayer;
+  let player;
+  let playerReady = false;
+  let playerState = -1;
+  let pendingPlayback = null;
+  let progressTimer = 0;
   let results = [];
   let queue = [];
-  let playlists = loadJson(PLAYLISTS_KEY, []);
+  let playlists = [];
   let current = null;
-  let view = 'discover';
-  let activePlaylistId = null;
-  let playlistPickerTrackId = null;
-  let searchValue = '';
+  let view = 'search';
+  let query = '';
   let loading = false;
   let status = '';
   let shuffle = false;
   let repeatMode = 'off';
+  let playlistPickerId = null;
+  let serverConfigured = false;
+  let apiKey = localStorage.getItem(API_KEY_KEY) || '';
   let initialized = false;
-  let requestId = 0;
 
   const ICONS = {
     music: '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
+    close: '<path d="M18 6 6 18M6 6l12 12"/>',
     search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/>',
     play: '<path d="m7 4 13 8-13 8V4Z"/>',
     pause: '<path d="M8 5v14M16 5v14"/>',
@@ -36,17 +43,17 @@
     repeat: '<path d="m17 2 4 4-4 4"/><path d="M3 11V9a3 3 0 0 1 3-3h15"/><path d="m7 22-4-4 4-4"/><path d="M21 13v2a3 3 0 0 1-3 3H3"/>',
     volume: '<path d="M11 5 6 9H2v6h4l5 4V5Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/>',
     queue: '<path d="M8 6h13M8 12h13M8 18h8"/><path d="M3 6h.01M3 12h.01M3 18h.01"/>',
-    compass: '<circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2 5-5 2 2-5 5-2Z"/>',
     playlist: '<path d="M4 6h10M4 11h10M4 16h7"/><path d="M18 13v7"/><path d="M15 17h6"/>',
+    settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21h-4v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3.1 14H3v-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.5V3h4v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.5 1h.1v4h-.1a1.7 1.7 0 0 0-1.5 1Z"/>',
     plus: '<path d="M12 5v14M5 12h14"/>',
-    x: '<path d="M18 6 6 18M6 6l12 12"/>',
     trash: '<path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 10v6M14 10v6"/>',
-    chevronLeft: '<path d="m15 18-6-6 6-6"/>',
-    chevronUp: '<path d="m18 15-6-6-6 6"/>',
-    chevronDown: '<path d="m6 9 6 6 6-6"/>',
+    up: '<path d="m18 15-6-6-6 6"/>',
+    down: '<path d="m6 9 6 6 6-6"/>',
+    back: '<path d="m15 18-6-6 6-6"/>',
     more: '<circle cx="5" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1" fill="currentColor" stroke="none"/>',
     check: '<path d="m5 12 4 4L19 6"/>',
-    external: '<path d="M15 3h6v6M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>',
+    key: '<circle cx="8" cy="15" r="4"/><path d="m11 12 9-9M17 6l3 3M14 9l2 2"/>',
+    trending: '<path d="m3 17 6-6 4 4 8-9"/><path d="M15 6h6v6"/>',
   };
 
   function icon(name, size = 17) {
@@ -64,68 +71,52 @@
 
   function loadJson(key, fallback) {
     try {
-      const parsed = JSON.parse(localStorage.getItem(key) || 'null');
-      return parsed ?? fallback;
+      const value = JSON.parse(localStorage.getItem(key) || 'null');
+      return value ?? fallback;
     } catch {
       return fallback;
     }
   }
 
-  function sameTrack(a, b) {
-    return Boolean(a?.id && b?.id && a.id === b.id);
-  }
-
   function cleanTrack(track) {
-    if (!track || !track.id || !track.title || !track.streamUrl) return null;
+    if (!track?.videoId || !track?.title) return null;
     return {
-      id: String(track.id),
+      videoId: String(track.videoId),
       title: String(track.title),
-      artist: String(track.artist || 'Audius artist'),
-      artistHandle: String(track.artistHandle || ''),
+      channel: String(track.channel || 'YouTube'),
+      thumbnail: String(track.thumbnail || `https://i.ytimg.com/vi/${track.videoId}/hqdefault.jpg`),
       duration: Number(track.duration) || 0,
-      artwork: String(track.artwork || ''),
-      genre: String(track.genre || ''),
-      mood: String(track.mood || ''),
-      permalink: String(track.permalink || ''),
-      streamUrl: String(track.streamUrl),
+      publishedAt: String(track.publishedAt || ''),
     };
   }
 
+  function sameTrack(a, b) {
+    return Boolean(a?.videoId && b?.videoId && a.videoId === b.videoId);
+  }
+
   function loadState() {
-    const saved = loadJson(STATE_KEY, {});
-    queue = Array.isArray(saved.queue) ? saved.queue.map(cleanTrack).filter(Boolean) : [];
-    current = cleanTrack(saved.current);
-    view = ['discover', 'queue', 'playlists'].includes(saved.view) ? saved.view : 'discover';
-    activePlaylistId = typeof saved.activePlaylistId === 'string' ? saved.activePlaylistId : null;
-    shuffle = Boolean(saved.shuffle);
-    repeatMode = ['off', 'all', 'one'].includes(saved.repeatMode) ? saved.repeatMode : 'off';
-    playlists = Array.isArray(playlists) ? playlists.map((playlist) => ({
+    const state = loadJson(STATE_KEY, {});
+    queue = Array.isArray(state.queue) ? state.queue.map(cleanTrack).filter(Boolean) : [];
+    current = cleanTrack(state.current);
+    view = ['search', 'queue', 'playlists', 'settings'].includes(state.view) ? state.view : 'search';
+    shuffle = Boolean(state.shuffle);
+    repeatMode = ['off', 'all', 'one'].includes(state.repeatMode) ? state.repeatMode : 'off';
+    query = typeof state.query === 'string' ? state.query : '';
+    const savedPlaylists = loadJson(PLAYLISTS_KEY, []);
+    playlists = (Array.isArray(savedPlaylists) ? savedPlaylists : []).map((playlist) => ({
       id: String(playlist.id || crypto.randomUUID()),
       name: String(playlist.name || 'Untitled playlist'),
       tracks: Array.isArray(playlist.tracks) ? playlist.tracks.map(cleanTrack).filter(Boolean) : [],
       createdAt: Number(playlist.createdAt) || Date.now(),
-    })) : [];
-    audio.volume = getSavedVolume();
+    }));
   }
 
   function saveState() {
-    localStorage.setItem(STATE_KEY, JSON.stringify({ queue, current, view, activePlaylistId, shuffle, repeatMode }));
+    localStorage.setItem(STATE_KEY, JSON.stringify({ queue, current, view, shuffle, repeatMode, query }));
   }
 
   function savePlaylists() {
     localStorage.setItem(PLAYLISTS_KEY, JSON.stringify(playlists));
-  }
-
-  function getSavedVolume() {
-    const settings = loadJson(SETTINGS_KEY, {});
-    const value = Number(settings.musicVolume);
-    return Number.isFinite(value) ? Math.min(100, Math.max(0, value)) / 100 : 0.55;
-  }
-
-  function saveVolume(value) {
-    const settings = loadJson(SETTINGS_KEY, {});
-    settings.musicVolume = Math.round(value * 100);
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
   }
 
   function formatTime(seconds) {
@@ -134,223 +125,358 @@
     return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, '0')}`;
   }
 
-  function formatCount(count, singular, plural = `${singular}s`) {
-    return `${count} ${count === 1 ? singular : plural}`;
+  function getVolume() {
+    const settings = loadJson(SETTINGS_KEY, {});
+    const volume = Number(settings.musicVolume);
+    return Number.isFinite(volume) ? Math.min(100, Math.max(0, volume)) : 55;
   }
 
-  function activePlaylist() {
-    return playlists.find((playlist) => playlist.id === activePlaylistId) || null;
+  function saveVolume(volume) {
+    const settings = loadJson(SETTINGS_KEY, {});
+    settings.musicVolume = Math.round(volume);
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
   }
 
-  function initialize() {
-    if (initialized) return;
-    initialized = true;
-    loadState();
-    createInterface();
-    render();
-    if (current) loadTrack(current, false);
-    void searchTracks('');
+  function getTrack(id) {
+    if (!id) return null;
+    if (current?.videoId === id) return current;
+    const result = results.find((track) => track.videoId === id);
+    if (result) return result;
+    const queued = queue.find((track) => track.videoId === id);
+    if (queued) return queued;
+    for (const playlist of playlists) {
+      const track = playlist.tracks.find((item) => item.videoId === id);
+      if (track) return track;
+    }
+    return null;
   }
 
   function createInterface() {
     const actions = document.querySelector('.header-actions');
-    if (!actions || document.querySelector('.luma-music-shell')) return;
+    if (!actions || document.querySelector('.luma-youtube-shell')) return false;
+
     shell = document.createElement('div');
-    shell.className = 'luma-music-shell luma-tool';
-    shell.innerHTML = `<button class="icon-control luma-trigger luma-music-trigger" data-panel="music" aria-label="Online music" title="Online music">${icon('music')}<span class="luma-badge" hidden></span></button><div class="luma-popover luma-music-popover" hidden></div>`;
+    shell.className = 'luma-youtube-shell luma-tool';
+    shell.innerHTML = `<button class="icon-control luma-trigger luma-youtube-trigger" data-action="toggle-drawer" aria-label="Music" aria-expanded="false" title="Music">${icon('music')}<span class="luma-badge" hidden></span></button>`;
     actions.insertBefore(shell, actions.querySelector('.text-control') || actions.lastElementChild);
-    popover = shell.querySelector('.luma-music-popover');
+
+    backdrop = document.createElement('button');
+    backdrop.className = 'luma-music-backdrop';
+    backdrop.type = 'button';
+    backdrop.dataset.action = 'close-drawer';
+    backdrop.setAttribute('aria-label', 'Close music panel');
+    document.body.appendChild(backdrop);
+
+    drawer = document.createElement('aside');
+    drawer.className = 'luma-music-drawer';
+    drawer.setAttribute('aria-label', 'YouTube music player');
+    drawer.innerHTML = `
+      <header class="luma-music-header">
+        <div><span>${icon('music', 18)}</span><div><strong>Music</strong><small>YouTube player</small></div></div>
+        <button data-action="close-drawer" aria-label="Close music panel">${icon('close', 17)}</button>
+      </header>
+      <section class="luma-youtube-player-card">
+        <div class="luma-youtube-stage"><div id="luma-youtube-player"></div><div class="luma-player-placeholder">${icon('music', 25)}<strong>Choose a track</strong><small>Search YouTube and press play.</small></div></div>
+        <div class="luma-now-playing"><div><strong data-now-title>Nothing playing</strong><small data-now-channel>Search YouTube to begin</small></div></div>
+        <label class="luma-youtube-seek"><input data-input="seek" type="range" min="0" max="0" step="0.25" value="0"><span data-current-time>0:00</span><span data-total-time>0:00</span></label>
+        <div class="luma-youtube-transport">
+          <button data-action="toggle-shuffle" aria-label="Shuffle" title="Shuffle">${icon('shuffle', 16)}</button>
+          <button data-action="previous" aria-label="Previous" title="Previous">${icon('previous', 18)}</button>
+          <button class="luma-youtube-play" data-action="toggle-play" aria-label="Play">${icon('play', 19)}</button>
+          <button data-action="next" aria-label="Next" title="Next">${icon('next', 18)}</button>
+          <button data-action="cycle-repeat" aria-label="Repeat" title="Repeat">${icon('repeat', 16)}<small></small></button>
+        </div>
+        <label class="luma-youtube-volume">${icon('volume', 14)}<input data-input="volume" type="range" min="0" max="100" value="${getVolume()}"><small>${getVolume()}%</small></label>
+      </section>
+      <nav class="luma-music-tabs" aria-label="Music sections">
+        ${tabButton('search', 'search', 'Search')}${tabButton('queue', 'queue', 'Queue')}${tabButton('playlists', 'playlist', 'Playlists')}${tabButton('settings', 'settings', 'Settings')}
+      </nav>
+      <div class="luma-music-content"></div>
+      <p class="luma-music-status" hidden></p>`;
+    document.body.appendChild(drawer);
+    content = drawer.querySelector('.luma-music-content');
 
     focusPlayer = document.createElement('div');
-    focusPlayer.className = 'luma-focus-player';
+    focusPlayer.className = 'luma-focus-player luma-youtube-focus-player';
     focusPlayer.hidden = true;
     document.body.appendChild(focusPlayer);
 
-    shell.addEventListener('click', handleClick);
-    shell.addEventListener('input', handleInput);
-    shell.addEventListener('submit', handleSubmit);
-    focusPlayer.addEventListener('click', handleClick);
-    document.addEventListener('mousedown', (event) => {
-      if (shell && !shell.contains(event.target)) popover.hidden = true;
-    });
+    document.addEventListener('click', handleClick);
+    drawer.addEventListener('input', handleInput);
+    drawer.addEventListener('submit', handleSubmit);
+    document.addEventListener('keydown', handleKeydown);
     new MutationObserver(renderFocusPlayer).observe(document.documentElement, { subtree: true, attributes: true, attributeFilter: ['class'] });
+    progressTimer = window.setInterval(syncProgress, 500);
+    return true;
+  }
+
+  function tabButton(id, iconName, label) {
+    return `<button data-action="set-view" data-view="${id}" class="${view === id ? 'active' : ''}">${icon(iconName, 14)}<span>${label}</span><small data-tab-count="${id}"></small></button>`;
+  }
+
+  function setDrawer(open) {
+    document.body.classList.toggle('luma-music-open', open);
+    shell?.querySelector('[data-action="toggle-drawer"]')?.setAttribute('aria-expanded', String(open));
+    shell?.querySelector('[data-action="toggle-drawer"]')?.classList.toggle('is-active', open);
+    if (open) window.setTimeout(() => drawer.querySelector('[data-input="search"]')?.focus(), 180);
   }
 
   function render() {
-    if (!shell || !popover) return;
+    if (!drawer || !content) return;
+    drawer.querySelectorAll('[data-action="set-view"]').forEach((button) => button.classList.toggle('active', button.dataset.view === view));
+    drawer.querySelector('[data-tab-count="queue"]').textContent = queue.length ? String(queue.length) : '';
+    drawer.querySelector('[data-tab-count="playlists"]').textContent = playlists.length ? String(playlists.length) : '';
     const badge = shell.querySelector('.luma-badge');
     badge.hidden = queue.length === 0;
     badge.textContent = String(queue.length);
-    popover.innerHTML = `
-      <div class="luma-popover-heading"><div><strong>Online music</strong><small>Search and stream tracks from Audius</small></div><a class="luma-provider-link" href="https://audius.co" target="_blank" rel="noreferrer">Audius ${icon('external', 11)}</a></div>
-      ${playerMarkup()}
-      <div class="luma-library-tabs" role="tablist" aria-label="Music views">
-        ${tabButton('discover', 'compass', 'Discover')}${tabButton('queue', 'queue', 'Queue', queue.length)}${tabButton('playlists', 'playlist', 'Playlists', playlists.length)}
-      </div>
-      <div class="luma-music-view">${view === 'discover' ? discoverMarkup() : view === 'queue' ? queueMarkup() : playlistsMarkup()}</div>
-      ${status ? `<p class="luma-library-status">${escapeHtml(status)}</p>` : ''}
-      <p class="luma-note">Tracks stream online from Audius. Luma stores only your queue and playlists in this browser.</p>`;
-    syncPlaybackUi();
+
+    content.innerHTML = view === 'search' ? searchMarkup() : view === 'queue' ? queueMarkup() : view === 'playlists' ? playlistsMarkup() : settingsMarkup();
+    const statusNode = drawer.querySelector('.luma-music-status');
+    statusNode.hidden = !status;
+    statusNode.textContent = status;
+    renderPlayerState();
     renderFocusPlayer();
   }
 
-  function tabButton(id, iconName, label, count = null) {
-    return `<button role="tab" data-action="set-view" data-view="${id}" class="${view === id ? 'active' : ''}" aria-selected="${view === id}">${icon(iconName, 14)}<span>${label}</span>${count !== null ? `<small>${count}</small>` : ''}</button>`;
+  function renderPlayerState() {
+    const title = drawer.querySelector('[data-now-title]');
+    const channel = drawer.querySelector('[data-now-channel]');
+    const placeholder = drawer.querySelector('.luma-player-placeholder');
+    title.textContent = current?.title || 'Nothing playing';
+    channel.textContent = current?.channel || 'Search YouTube to begin';
+    placeholder.hidden = Boolean(current);
+
+    const playing = playerState === 1;
+    const playButton = drawer.querySelector('.luma-youtube-play');
+    playButton.innerHTML = icon(playing ? 'pause' : 'play', 19);
+    playButton.setAttribute('aria-label', playing ? 'Pause' : 'Play');
+    drawer.querySelector('[data-action="toggle-shuffle"]').classList.toggle('active', shuffle);
+    const repeatButton = drawer.querySelector('[data-action="cycle-repeat"]');
+    repeatButton.classList.toggle('active', repeatMode !== 'off');
+    repeatButton.querySelector('small').textContent = repeatMode === 'one' ? '1' : '';
+    syncProgress();
   }
 
-  function playerMarkup() {
-    if (!current) return `<div class="luma-online-hero">${icon('music', 24)}<div><strong>Search. Queue. Keep writing.</strong><small>Choose any available Audius track below to start playing.</small></div></div>`;
-    return `<section class="luma-player luma-library-player">
-      <div class="luma-track-summary">${current.artwork ? `<img src="${escapeHtml(current.artwork)}" alt="">` : `<i>${icon('music', 18)}</i>`}<div><strong title="${escapeHtml(current.title)}">${escapeHtml(current.title)}</strong><small>${escapeHtml(current.artist)}</small></div></div>
-      <label class="luma-seek"><input data-input="seek" type="range" min="0" max="${Math.max(0, audio.duration || current.duration || 0)}" step="0.1" value="${Math.max(0, audio.currentTime || 0)}"><span data-time-current>${formatTime(audio.currentTime)}</span><span data-time-total>${formatTime(audio.duration || current.duration)}</span></label>
-      <div class="luma-transport"><button data-action="toggle-shuffle" class="${shuffle ? 'active' : ''}" aria-label="Shuffle">${icon('shuffle', 15)}</button><button data-action="previous" aria-label="Previous">${icon('previous', 17)}</button><button class="luma-play" data-action="toggle-play" aria-label="${audio.paused ? 'Play' : 'Pause'}">${icon(audio.paused ? 'play' : 'pause', 18)}</button><button data-action="next" aria-label="Next">${icon('next', 17)}</button><button data-action="cycle-repeat" class="${repeatMode !== 'off' ? 'active' : ''}" aria-label="Repeat: ${repeatMode}">${icon('repeat', 15)}${repeatMode === 'one' ? '<small>1</small>' : ''}</button></div>
-      <label class="luma-range luma-music-volume"><span>${icon('volume', 14)}</span><input data-input="volume" type="range" min="0" max="100" value="${Math.round(audio.volume * 100)}"><small>${Math.round(audio.volume * 100)}%</small></label>
-    </section>`;
+  function searchMarkup() {
+    const configured = serverConfigured || Boolean(apiKey);
+    return `
+      <form class="luma-youtube-search-form" data-form="search">
+        <label>${icon('search', 15)}<input data-input="search" value="${escapeHtml(query)}" placeholder="Search songs, artists, or mixes" autocomplete="off"></label>
+        <button type="submit" ${loading ? 'disabled' : ''}>${loading ? 'Searching…' : 'Search'}</button>
+      </form>
+      <div class="luma-quick-searches">
+        <button data-action="trending">${icon('trending', 12)} Trending</button>
+        ${['lofi hip hop','focus music','jazz playlist','classical music'].map((term) => `<button data-action="quick-search" data-query="${escapeHtml(term)}">${escapeHtml(term)}</button>`).join('')}
+      </div>
+      ${!configured ? `<button class="luma-youtube-setup-card" data-action="open-settings">${icon('key', 20)}<span><strong>Add your YouTube API key</strong><small>Configure search once, then use the player normally.</small></span></button>` : ''}
+      <div class="luma-section-heading"><span>${query.trim() ? 'Search results' : 'Popular music'}</span><small>${results.length ? `${results.length} videos` : ''}</small></div>
+      ${loading ? `<div class="luma-youtube-loading"><i></i><span>Searching YouTube…</span></div>` : results.length ? `<div class="luma-youtube-results">${results.map(resultMarkup).join('')}</div>` : `<div class="luma-youtube-empty">${icon('search', 22)}<strong>${configured ? 'Search for music' : 'API key required'}</strong><small>${configured ? 'Results will appear here.' : 'Open Settings and paste your YouTube Data API v3 key.'}</small></div>`}`;
   }
 
-  function discoverMarkup() {
-    return `<form class="luma-online-search" data-form="search"><label>${icon('search', 14)}<input data-input="search" value="${escapeHtml(searchValue)}" placeholder="Search songs or artists" autocomplete="off"></label><button type="submit" ${loading ? 'disabled' : ''}>${loading ? 'Searching…' : 'Search'}</button></form>
-      <div class="luma-library-meta"><span>${searchValue.trim() ? 'Search results' : 'Trending this week'}</span><small>${formatCount(results.length, 'track')}</small></div>
-      ${loading ? '<div class="luma-online-loading"><i></i><span>Finding music…</span></div>' : results.length ? `<div class="luma-track-list">${results.map(resultRowMarkup).join('')}</div>` : `<div class="luma-library-empty">${icon('search', 22)}<strong>No tracks found</strong><small>Try another song, artist, genre, or mood.</small></div>`}`;
-  }
-
-  function resultRowMarkup(track) {
+  function resultMarkup(track) {
     const inQueue = queue.some((item) => sameTrack(item, track));
-    const pickerOpen = playlistPickerTrackId === track.id;
-    return `<div class="luma-track-block ${sameTrack(track, current) ? 'active' : ''}"><div class="luma-library-track"><button class="luma-track-main" data-action="play-result" data-id="${track.id}">${track.artwork ? `<img src="${escapeHtml(track.artwork)}" alt="">` : `<span>${sameTrack(track, current) && !audio.paused ? icon('pause', 12) : icon('play', 12)}</span>`}<span><strong title="${escapeHtml(track.title)}">${escapeHtml(track.title)}</strong><small>${escapeHtml(track.artist)}${track.duration ? ` · ${formatTime(track.duration)}` : ''}</small></span></button><div class="luma-track-actions"><button data-action="queue-result" data-id="${track.id}" class="${inQueue ? 'active' : ''}" aria-label="Add to queue">${icon(inQueue ? 'check' : 'queue', 13)}</button><button data-action="open-playlist-picker" data-id="${track.id}" aria-label="Add to playlist">${icon('playlist', 13)}</button></div></div>${pickerOpen ? playlistPickerMarkup(track) : ''}</div>`;
+    const pickerOpen = playlistPickerId === track.videoId;
+    return `<div class="luma-youtube-result-wrap ${sameTrack(current, track) ? 'active' : ''}">
+      <div class="luma-youtube-result">
+        <button class="luma-youtube-result-main" data-action="play-track" data-id="${track.videoId}"><img src="${escapeHtml(track.thumbnail)}" alt=""><span><strong title="${escapeHtml(track.title)}">${escapeHtml(track.title)}</strong><small>${escapeHtml(track.channel)}${track.duration ? ` · ${formatTime(track.duration)}` : ''}</small></span></button>
+        <div><button data-action="queue-track" data-id="${track.videoId}" class="${inQueue ? 'active' : ''}" aria-label="Add to queue">${icon(inQueue ? 'check' : 'queue', 13)}</button><button data-action="playlist-picker" data-id="${track.videoId}" aria-label="Add to playlist">${icon('playlist', 13)}</button></div>
+      </div>${pickerOpen ? playlistPickerMarkup(track) : ''}</div>`;
   }
 
   function playlistPickerMarkup(track) {
-    return `<div class="luma-playlist-picker"><div><strong>Add to playlist</strong><button data-action="close-playlist-picker" aria-label="Close">${icon('x', 12)}</button></div>${playlists.length ? playlists.map((playlist) => { const included = playlist.tracks.some((item) => sameTrack(item, track)); return `<button data-action="toggle-track-playlist" data-track-id="${track.id}" data-playlist-id="${playlist.id}" class="${included ? 'active' : ''}"><span>${escapeHtml(playlist.name)}</span><small>${included ? 'Added' : formatCount(playlist.tracks.length, 'track')}</small></button>`; }).join('') : '<p>Create a playlist first from the Playlists tab.</p>'}</div>`;
+    return `<div class="luma-youtube-playlist-picker"><div><strong>Add to playlist</strong><button data-action="close-picker">${icon('close', 12)}</button></div>${playlists.length ? playlists.map((playlist) => { const added = playlist.tracks.some((item) => sameTrack(item, track)); return `<button data-action="toggle-playlist-track" data-id="${track.videoId}" data-playlist-id="${playlist.id}" class="${added ? 'active' : ''}"><span>${escapeHtml(playlist.name)}</span><small>${added ? 'Added' : `${playlist.tracks.length} tracks`}</small></button>`; }).join('') : '<p>Create a playlist from the Playlists tab first.</p>'}</div>`;
   }
 
   function queueMarkup() {
-    if (!queue.length) return `<div class="luma-library-empty">${icon('queue', 22)}<strong>The queue is empty</strong><small>Search online tracks and add what should play next.</small><button data-action="set-view" data-view="discover">Discover music</button></div>`;
-    return `<div class="luma-queue-header"><span>${formatCount(queue.length, 'track')}</span><button data-action="clear-queue">Clear queue</button></div><div class="luma-queue-list">${queue.map((track, index) => `<div class="luma-queue-item ${sameTrack(track, current) ? 'active' : ''}"><button class="luma-queue-track" data-action="play-queue-index" data-index="${index}">${track.artwork ? `<img class="luma-queue-art" src="${escapeHtml(track.artwork)}" alt="">` : `<span class="luma-queue-icon">${sameTrack(track, current) && !audio.paused ? icon('pause', 11) : icon('play', 11)}</span>`}<span class="luma-queue-copy"><strong>${escapeHtml(track.title)}</strong><small>${escapeHtml(track.artist)}</small></span></button><div class="luma-queue-actions"><button data-action="move-queue" data-index="${index}" data-direction="-1" ${index === 0 ? 'disabled' : ''}>${icon('chevronUp', 12)}</button><button data-action="move-queue" data-index="${index}" data-direction="1" ${index === queue.length - 1 ? 'disabled' : ''}>${icon('chevronDown', 12)}</button><button data-action="remove-queue" data-index="${index}">${icon('x', 12)}</button></div></div>`).join('')}</div>`;
+    if (!queue.length) return `<div class="luma-youtube-empty tall">${icon('queue', 23)}<strong>Your queue is empty</strong><small>Add videos from Search to choose what plays next.</small><button data-action="set-view" data-view="search">Search music</button></div>`;
+    return `<div class="luma-queue-heading"><span>${queue.length} ${queue.length === 1 ? 'track' : 'tracks'}</span><button data-action="clear-queue">Clear queue</button></div><div class="luma-youtube-queue">${queue.map((track, index) => `<div class="luma-youtube-queue-row ${sameTrack(track, current) ? 'active' : ''}"><button data-action="play-queue" data-index="${index}"><img src="${escapeHtml(track.thumbnail)}" alt=""><span><strong>${escapeHtml(track.title)}</strong><small>${escapeHtml(track.channel)}</small></span></button><div><button data-action="move-queue" data-index="${index}" data-direction="-1" ${index === 0 ? 'disabled' : ''}>${icon('up', 12)}</button><button data-action="move-queue" data-index="${index}" data-direction="1" ${index === queue.length - 1 ? 'disabled' : ''}>${icon('down', 12)}</button><button data-action="remove-queue" data-index="${index}">${icon('close', 12)}</button></div></div>`).join('')}</div>`;
   }
 
   function playlistsMarkup() {
-    const playlist = activePlaylist();
-    if (playlist) return playlistDetailMarkup(playlist);
-    return `<form class="luma-playlist-create" data-form="create-playlist"><input name="playlistName" placeholder="New playlist name" maxlength="60" autocomplete="off"><button type="submit">${icon('plus', 14)} Create</button></form>${playlists.length ? `<div class="luma-playlist-list">${playlists.map((item) => `<div class="luma-playlist-card"><button class="luma-playlist-open" data-action="open-playlist" data-id="${item.id}"><i>${icon('music', 16)}</i><span><strong>${escapeHtml(item.name)}</strong><small>${formatCount(item.tracks.length, 'track')}</small></span></button><div><button data-action="play-playlist" data-id="${item.id}">${icon('play', 13)}</button><button data-action="rename-playlist" data-id="${item.id}">${icon('more', 13)}</button><button data-action="delete-playlist" data-id="${item.id}">${icon('trash', 13)}</button></div></div>`).join('')}</div>` : `<div class="luma-library-empty">${icon('playlist', 22)}<strong>No playlists yet</strong><small>Create one, then add online tracks from Discover.</small></div>`}`;
+    const active = playlists.find((playlist) => playlist.id === viewPlaylistId());
+    if (active) return playlistDetailMarkup(active);
+    return `<form class="luma-playlist-create" data-form="playlist"><input name="name" placeholder="New playlist name" maxlength="60" autocomplete="off"><button type="submit">${icon('plus', 13)} Create</button></form>${playlists.length ? `<div class="luma-youtube-playlists">${playlists.map((playlist) => `<div class="luma-youtube-playlist-card"><button data-action="open-playlist" data-playlist-id="${playlist.id}"><i>${icon('music', 16)}</i><span><strong>${escapeHtml(playlist.name)}</strong><small>${playlist.tracks.length} ${playlist.tracks.length === 1 ? 'track' : 'tracks'}</small></span></button><div><button data-action="play-playlist" data-playlist-id="${playlist.id}">${icon('play', 13)}</button><button data-action="rename-playlist" data-playlist-id="${playlist.id}">${icon('more', 13)}</button><button data-action="delete-playlist" data-playlist-id="${playlist.id}">${icon('trash', 13)}</button></div></div>`).join('')}</div>` : `<div class="luma-youtube-empty tall">${icon('playlist', 23)}<strong>No playlists yet</strong><small>Create one and add tracks from Search.</small></div>`}`;
+  }
+
+  function viewPlaylistId() {
+    return drawer?.dataset.playlistId || '';
   }
 
   function playlistDetailMarkup(playlist) {
-    return `<div class="luma-playlist-detail-heading"><button data-action="close-playlist">${icon('chevronLeft', 14)}</button><div><strong>${escapeHtml(playlist.name)}</strong><small>${formatCount(playlist.tracks.length, 'track')}</small></div><div><button data-action="play-playlist" data-id="${playlist.id}" ${playlist.tracks.length ? '' : 'disabled'}>${icon('play', 13)} Play</button><button data-action="shuffle-playlist" data-id="${playlist.id}" ${playlist.tracks.length ? '' : 'disabled'}>${icon('shuffle', 13)}</button></div></div>${playlist.tracks.length ? `<div class="luma-track-list">${playlist.tracks.map((track) => `<div class="luma-library-track ${sameTrack(track, current) ? 'active' : ''}"><button class="luma-track-main" data-action="play-saved-track" data-track="${escapeHtml(encodeURIComponent(JSON.stringify(track)))}">${track.artwork ? `<img src="${escapeHtml(track.artwork)}" alt="">` : `<span>${icon('play', 12)}</span>`}<span><strong>${escapeHtml(track.title)}</strong><small>${escapeHtml(track.artist)}</small></span></button><div class="luma-track-actions"><button data-action="queue-saved-track" data-track="${escapeHtml(encodeURIComponent(JSON.stringify(track)))}">${icon('queue', 13)}</button><button data-action="remove-from-playlist" data-track-id="${track.id}" data-playlist-id="${playlist.id}">${icon('x', 13)}</button></div></div>`).join('')}</div>` : `<div class="luma-library-empty"><strong>This playlist is empty</strong><small>Add tracks from Discover.</small><button data-action="set-view" data-view="discover">Discover music</button></div>`}`;
+    return `<div class="luma-playlist-detail-header"><button data-action="close-playlist">${icon('back', 14)}</button><div><strong>${escapeHtml(playlist.name)}</strong><small>${playlist.tracks.length} ${playlist.tracks.length === 1 ? 'track' : 'tracks'}</small></div><div><button data-action="play-playlist" data-playlist-id="${playlist.id}" ${playlist.tracks.length ? '' : 'disabled'}>${icon('play', 13)} Play</button><button data-action="shuffle-playlist" data-playlist-id="${playlist.id}" ${playlist.tracks.length ? '' : 'disabled'}>${icon('shuffle', 13)}</button></div></div>${playlist.tracks.length ? `<div class="luma-youtube-results">${playlist.tracks.map((track) => `<div class="luma-youtube-result"><button class="luma-youtube-result-main" data-action="play-track" data-id="${track.videoId}"><img src="${escapeHtml(track.thumbnail)}" alt=""><span><strong>${escapeHtml(track.title)}</strong><small>${escapeHtml(track.channel)}</small></span></button><div><button data-action="queue-track" data-id="${track.videoId}">${icon('queue', 13)}</button><button data-action="remove-playlist-track" data-id="${track.videoId}" data-playlist-id="${playlist.id}">${icon('close', 13)}</button></div></div>`).join('')}</div>` : `<div class="luma-youtube-empty tall"><strong>This playlist is empty</strong><small>Add tracks from Search.</small><button data-action="set-view" data-view="search">Search music</button></div>`}`;
   }
 
-  function renderFocusPlayer() {
-    if (!focusPlayer) return;
-    const app = document.querySelector('.app');
-    focusPlayer.hidden = !app?.classList.contains('focus-mode') || !current;
-    if (focusPlayer.hidden) return;
-    focusPlayer.innerHTML = `<button data-action="previous">${icon('previous', 14)}</button><button class="luma-focus-play" data-action="toggle-play">${icon(audio.paused ? 'play' : 'pause', 14)}</button><div><strong>${escapeHtml(current.title)}</strong><small data-focus-time>${formatTime(audio.currentTime)} / ${formatTime(audio.duration || current.duration)}</small></div><button data-action="next">${icon('next', 14)}</button>`;
+  function settingsMarkup() {
+    return `<div class="luma-youtube-settings">
+      <section><div class="luma-settings-title">${icon('key', 17)}<div><strong>YouTube Data API key</strong><small>Required only for search. Playback uses YouTube's embedded player.</small></div></div><form data-form="api-key"><label><input type="password" name="apiKey" value="${escapeHtml(apiKey)}" placeholder="AIza…" autocomplete="off"><button type="button" data-action="toggle-key">Show</button></label><div><button type="submit">Save key</button>${apiKey ? '<button type="button" data-action="clear-key">Remove local key</button>' : ''}</div></form><p class="luma-settings-note">The local key stays in this browser and is sent only to Luma's search endpoint. For a shared deployment, add <code>YOUTUBE_API_KEY</code> in Vercel instead.</p></section>
+      <section><div class="luma-settings-status ${serverConfigured ? 'ok' : ''}"><i></i><div><strong>${serverConfigured ? 'Vercel key detected' : apiKey ? 'Local browser key saved' : 'No API key configured'}</strong><small>${serverConfigured ? 'Visitors can search without entering a key.' : apiKey ? 'This browser can search YouTube.' : 'Paste your key above to enable search.'}</small></div></div></section>
+      <section><div class="luma-settings-title">${icon('settings', 17)}<div><strong>Playback</strong><small>Queue and playlists are saved in this browser.</small></div></div><button class="luma-reset-music" data-action="reset-music">Reset queue, playlists, and player</button></section>
+    </div>`;
   }
 
-  function findResult(id) {
-    return results.find((track) => track.id === id) || null;
+  function loadYouTubeApi() {
+    return new Promise((resolve) => {
+      if (window.YT?.Player) { resolve(); return; }
+      const previous = window.onYouTubeIframeAPIReady;
+      window.onYouTubeIframeAPIReady = () => { if (typeof previous === 'function') previous(); resolve(); };
+      if (!document.querySelector('script[src="https://www.youtube.com/iframe_api"]')) {
+        const script = document.createElement('script');
+        script.src = 'https://www.youtube.com/iframe_api';
+        script.async = true;
+        document.head.appendChild(script);
+      }
+    });
   }
 
-  function parseTrackAttribute(value) {
-    try { return cleanTrack(JSON.parse(decodeURIComponent(value || ''))); } catch { return null; }
-  }
-
-  async function searchTracks(query) {
-    const token = ++requestId;
-    loading = true;
-    status = '';
-    render();
-    try {
-      const response = await fetch(`/api/audius${query ? `?q=${encodeURIComponent(query)}` : ''}`, { headers: { Accept: 'application/json' } });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.error || 'Online music search failed.');
-      if (token !== requestId) return;
-      results = Array.isArray(payload.tracks) ? payload.tracks.map(cleanTrack).filter(Boolean) : [];
-      status = results.length ? '' : 'No tracks matched that search.';
-    } catch (error) {
-      if (token !== requestId) return;
-      results = [];
-      status = error instanceof Error ? error.message : 'Could not search online music.';
-    } finally {
-      if (token === requestId) { loading = false; render(); }
-    }
+  async function ensurePlayer() {
+    if (player) return player;
+    await loadYouTubeApi();
+    player = new window.YT.Player('luma-youtube-player', {
+      width: '100%', height: '100%',
+      playerVars: { autoplay: 1, controls: 0, disablekb: 1, fs: 0, iv_load_policy: 3, playsinline: 1, rel: 0, origin: location.origin },
+      events: {
+        onReady: (event) => {
+          playerReady = true;
+          event.target.setVolume(getVolume());
+          if (pendingPlayback?.track) {
+            const pending = pendingPlayback;
+            pendingPlayback = null;
+            if (pending.autoplay) event.target.loadVideoById(pending.track.videoId);
+            else event.target.cueVideoById(pending.track.videoId);
+          }
+          renderPlayerState();
+        },
+        onStateChange: (event) => {
+          playerState = event.data;
+          if (event.data === window.YT.PlayerState.ENDED) handleEnded();
+          renderPlayerState();
+        },
+        onError: () => {
+          status = 'This video cannot be played in the embedded player. Try another result.';
+          render();
+        },
+      },
+    });
+    return player;
   }
 
   async function loadTrack(track, autoplay = true) {
-    current = cleanTrack(track);
-    if (!current) return;
-    audio.src = current.streamUrl;
-    audio.volume = getSavedVolume();
-    audio.load();
-    updateMediaSession(current);
-    saveState();
-    if (autoplay) {
-      try { await audio.play(); } catch { status = 'Press play to allow audio in this browser.'; }
-    }
-    render();
-  }
-
-  function playTrack(track) {
+    track = cleanTrack(track);
     if (!track) return;
+    current = track;
     if (!queue.some((item) => sameTrack(item, track))) queue.push(track);
-    if (sameTrack(current, track) && audio.src) { void togglePlay(); return; }
-    void loadTrack(track, true);
-  }
-
-  function queueTrack(track) {
-    if (!track) return;
-    if (queue.some((item) => sameTrack(item, track))) status = 'That track is already in the queue.';
-    else { queue.push(track); status = `Queued “${track.title}”.`; }
-    if (!current) current = track;
     saveState();
     render();
+    await ensurePlayer();
+    if (!playerReady) pendingPlayback = { track, autoplay };
+    else if (autoplay) player.loadVideoById(track.videoId);
+    else player.cueVideoById(track.videoId);
   }
 
-  async function togglePlay() {
-    if (!current) {
-      const first = queue[0] || results[0];
-      if (!first) { view = 'discover'; render(); return; }
-      await loadTrack(first, true);
+  async function searchYouTube(searchQuery = query.trim()) {
+    if (!serverConfigured && !apiKey) {
+      view = 'settings';
+      status = 'Add your YouTube Data API v3 key to enable search.';
+      render();
       return;
     }
-    if (!audio.src) { await loadTrack(current, true); return; }
-    if (audio.paused) { try { await audio.play(); } catch { status = 'Press play again to allow audio.'; } }
-    else audio.pause();
+    loading = true;
+    status = '';
+    query = searchQuery;
+    view = 'search';
+    saveState();
     render();
+    const region = (navigator.language.split('-')[1] || 'US').toUpperCase();
+    try {
+      const params = new URLSearchParams({ limit: '12', region });
+      if (searchQuery) params.set('q', searchQuery);
+      const response = await fetch(`/api/youtube-search?${params}`, { headers: apiKey ? { 'X-YouTube-API-Key': apiKey } : {} });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || 'YouTube search failed.');
+      results = Array.isArray(payload.videos) ? payload.videos.map(cleanTrack).filter(Boolean) : [];
+      serverConfigured = Boolean(payload.serverConfigured) || serverConfigured;
+      status = results.length ? '' : 'No embeddable music videos matched that search.';
+    } catch (error) {
+      results = [];
+      status = error instanceof Error ? error.message : 'YouTube search failed.';
+      if (/key|credential|api/i.test(status)) view = 'settings';
+    } finally {
+      loading = false;
+      render();
+    }
   }
 
-  function currentQueueIndex() {
+  async function checkConfiguration() {
+    try {
+      const response = await fetch('/api/youtube-search?status=1');
+      const payload = await response.json();
+      serverConfigured = Boolean(payload.serverConfigured);
+    } catch {
+      serverConfigured = false;
+    }
+    render();
+    if (serverConfigured || apiKey) void searchYouTube('');
+  }
+
+  function togglePlay() {
+    if (!current) {
+      const first = queue[0] || results[0];
+      if (first) void loadTrack(first, true);
+      else { view = 'search'; setDrawer(true); render(); }
+      return;
+    }
+    void ensurePlayer().then(() => {
+      if (!playerReady) { pendingPlayback = { track: current, autoplay: true }; return; }
+      if (playerState === 1) player.pauseVideo();
+      else if (playerState === -1 || playerState === 5) player.loadVideoById(current.videoId);
+      else player.playVideo();
+    });
+  }
+
+  function currentIndex() {
     return queue.findIndex((track) => sameTrack(track, current));
   }
 
   function nextTrack(fromEnded = false) {
     if (!queue.length) return;
-    if (fromEnded && repeatMode === 'one') { audio.currentTime = 0; void audio.play(); return; }
-    let index = currentQueueIndex();
+    if (fromEnded && repeatMode === 'one') { player?.seekTo(0, true); player?.playVideo(); return; }
+    let index = currentIndex();
     if (shuffle && queue.length > 1) {
-      const choices = queue.map((_, i) => i).filter((i) => i !== index);
+      const choices = queue.map((_, position) => position).filter((position) => position !== index);
       index = choices[Math.floor(Math.random() * choices.length)];
     } else {
       index += 1;
       if (index >= queue.length) {
         if (repeatMode === 'all') index = 0;
-        else { audio.pause(); audio.currentTime = 0; render(); return; }
+        else { player?.pauseVideo(); player?.seekTo(0, true); return; }
       }
     }
     void loadTrack(queue[Math.max(0, index)], true);
   }
 
   function previousTrack() {
-    if (audio.currentTime > 3) { audio.currentTime = 0; syncPlaybackUi(); return; }
+    if (playerReady && player.getCurrentTime() > 3) { player.seekTo(0, true); return; }
     if (!queue.length) return;
-    let index = currentQueueIndex();
+    let index = currentIndex();
     index = index > 0 ? index - 1 : repeatMode === 'all' ? queue.length - 1 : 0;
     void loadTrack(queue[index], true);
   }
 
+  function handleEnded() {
+    nextTrack(true);
+  }
+
+  function queueTrack(track) {
+    if (!track) return;
+    if (queue.some((item) => sameTrack(item, track))) status = 'That track is already in the queue.';
+    else { queue.push(track); status = `Queued “${track.title}”.`; }
+    saveState();
+    render();
+  }
+
   function moveQueue(index, direction) {
     const target = index + direction;
-    if (index < 0 || target < 0 || target >= queue.length) return;
+    if (target < 0 || target >= queue.length) return;
     [queue[index], queue[target]] = [queue[target], queue[index]];
     saveState(); render();
   }
@@ -360,20 +486,14 @@
     queue.splice(index, 1);
     if (sameTrack(removed, current)) {
       const replacement = queue[index] || queue[index - 1] || null;
-      if (replacement) void loadTrack(replacement, !audio.paused);
-      else { current = null; audio.pause(); audio.removeAttribute('src'); audio.load(); }
+      current = replacement;
+      if (replacement) void loadTrack(replacement, false);
+      else { player?.stopVideo(); playerState = -1; }
     }
     saveState(); render();
   }
 
-  function createPlaylist(name) {
-    const clean = name.trim();
-    if (!clean) return;
-    const playlist = { id: crypto.randomUUID?.() || `${Date.now()}`, name: clean, tracks: [], createdAt: Date.now() };
-    playlists.push(playlist); activePlaylistId = playlist.id; savePlaylists(); saveState(); render();
-  }
-
-  function toggleTrackPlaylist(track, playlistId) {
+  function togglePlaylistTrack(track, playlistId) {
     if (!track) return;
     playlists = playlists.map((playlist) => {
       if (playlist.id !== playlistId) return playlist;
@@ -383,109 +503,130 @@
     savePlaylists(); render();
   }
 
-  function playPlaylist(id, shouldShuffle = false) {
-    const playlist = playlists.find((item) => item.id === id);
+  function playPlaylist(playlistId, randomize = false) {
+    const playlist = playlists.find((item) => item.id === playlistId);
     if (!playlist?.tracks.length) return;
     queue = [...playlist.tracks];
-    if (shouldShuffle) queue.sort(() => Math.random() - 0.5);
-    shuffle = shouldShuffle;
+    if (randomize) queue.sort(() => Math.random() - 0.5);
+    shuffle = randomize;
+    saveState();
     void loadTrack(queue[0], true);
   }
 
-  function renamePlaylist(id) {
-    const playlist = playlists.find((item) => item.id === id);
-    if (!playlist) return;
-    const name = prompt('Rename playlist', playlist.name)?.trim();
-    if (!name) return;
-    playlist.name = name; savePlaylists(); render();
+  function syncProgress() {
+    if (!drawer) return;
+    let currentTime = 0;
+    let duration = current?.duration || 0;
+    if (playerReady) {
+      try { currentTime = player.getCurrentTime() || 0; duration = player.getDuration() || duration; } catch {}
+    }
+    const seek = drawer.querySelector('[data-input="seek"]');
+    if (seek && document.activeElement !== seek) {
+      seek.max = String(Math.max(0, duration));
+      seek.value = String(Math.min(duration || currentTime, currentTime));
+    }
+    drawer.querySelector('[data-current-time]').textContent = formatTime(currentTime);
+    drawer.querySelector('[data-total-time]').textContent = formatTime(duration);
+    const focusTime = focusPlayer?.querySelector('[data-focus-time]');
+    if (focusTime) focusTime.textContent = `${formatTime(currentTime)} / ${formatTime(duration)}`;
   }
 
-  function deletePlaylist(id) {
-    const playlist = playlists.find((item) => item.id === id);
-    if (!playlist || !confirm(`Delete playlist “${playlist.name}”?`)) return;
-    playlists = playlists.filter((item) => item.id !== id);
-    if (activePlaylistId === id) activePlaylistId = null;
-    savePlaylists(); saveState(); render();
-  }
-
-  function updateMediaSession(track) {
-    if (!('mediaSession' in navigator)) return;
-    try {
-      navigator.mediaSession.metadata = new MediaMetadata({ title: track.title, artist: track.artist, album: 'Audius', artwork: track.artwork ? [{ src: track.artwork }] : [] });
-    } catch {}
-  }
-
-  function syncPlaybackUi() {
-    const duration = Number.isFinite(audio.duration) ? audio.duration : current?.duration || 0;
-    const time = Number.isFinite(audio.currentTime) ? audio.currentTime : 0;
-    document.querySelectorAll('[data-input="seek"]').forEach((seek) => { seek.max = String(Math.max(0, duration)); seek.value = String(Math.min(duration || time, time)); });
-    document.querySelectorAll('[data-time-current]').forEach((node) => { node.textContent = formatTime(time); });
-    document.querySelectorAll('[data-time-total]').forEach((node) => { node.textContent = formatTime(duration); });
-    document.querySelectorAll('[data-focus-time]').forEach((node) => { node.textContent = `${formatTime(time)} / ${formatTime(duration)}`; });
+  function renderFocusPlayer() {
+    if (!focusPlayer) return;
+    const inFocus = document.querySelector('.app')?.classList.contains('focus-mode');
+    focusPlayer.hidden = !inFocus || !current;
+    if (focusPlayer.hidden) return;
+    focusPlayer.innerHTML = `<button data-action="previous">${icon('previous', 14)}</button><button class="luma-focus-play" data-action="toggle-play">${icon(playerState === 1 ? 'pause' : 'play', 14)}</button><div><strong>${escapeHtml(current.title)}</strong><small data-focus-time>0:00 / ${formatTime(current.duration)}</small></div><button data-action="next">${icon('next', 14)}</button>`;
+    syncProgress();
   }
 
   function handleClick(event) {
     const button = event.target.closest('button');
     if (!button) return;
-    if (button.dataset.panel === 'music') { popover.hidden = !popover.hidden; if (!popover.hidden) setTimeout(() => popover.querySelector('[data-input="search"]')?.focus(), 0); return; }
+    if (!(shell?.contains(button) || drawer?.contains(button) || focusPlayer?.contains(button) || button === backdrop)) return;
     const action = button.dataset.action;
-    if (action === 'set-view') { view = button.dataset.view; if (view !== 'playlists') activePlaylistId = null; saveState(); render(); }
-    else if (action === 'play-result') playTrack(findResult(button.dataset.id));
-    else if (action === 'queue-result') queueTrack(findResult(button.dataset.id));
-    else if (action === 'open-playlist-picker') { playlistPickerTrackId = playlistPickerTrackId === button.dataset.id ? null : button.dataset.id; render(); }
-    else if (action === 'close-playlist-picker') { playlistPickerTrackId = null; render(); }
-    else if (action === 'toggle-track-playlist') toggleTrackPlaylist(findResult(button.dataset.trackId), button.dataset.playlistId);
-    else if (action === 'play-saved-track') playTrack(parseTrackAttribute(button.dataset.track));
-    else if (action === 'queue-saved-track') queueTrack(parseTrackAttribute(button.dataset.track));
-    else if (action === 'play-queue-index') void loadTrack(queue[Number(button.dataset.index)], true);
-    else if (action === 'move-queue') moveQueue(Number(button.dataset.index), Number(button.dataset.direction));
-    else if (action === 'remove-queue') removeQueue(Number(button.dataset.index));
-    else if (action === 'clear-queue') { queue = []; current = null; audio.pause(); audio.removeAttribute('src'); audio.load(); saveState(); render(); }
-    else if (action === 'toggle-play') void togglePlay();
-    else if (action === 'next') nextTrack(false);
+    if (!action) return;
+    if (action === 'toggle-drawer') setDrawer(!document.body.classList.contains('luma-music-open'));
+    else if (action === 'close-drawer') setDrawer(false);
+    else if (action === 'set-view') { view = button.dataset.view; if (view !== 'playlists') delete drawer.dataset.playlistId; saveState(); render(); }
+    else if (action === 'open-settings') { view = 'settings'; saveState(); render(); }
+    else if (action === 'quick-search') { query = button.dataset.query || ''; void searchYouTube(query); }
+    else if (action === 'trending') { query = ''; void searchYouTube(''); }
+    else if (action === 'play-track') void loadTrack(getTrack(button.dataset.id), true);
+    else if (action === 'queue-track') queueTrack(getTrack(button.dataset.id));
+    else if (action === 'playlist-picker') { playlistPickerId = playlistPickerId === button.dataset.id ? null : button.dataset.id; render(); }
+    else if (action === 'close-picker') { playlistPickerId = null; render(); }
+    else if (action === 'toggle-playlist-track') togglePlaylistTrack(getTrack(button.dataset.id), button.dataset.playlistId);
+    else if (action === 'toggle-play') togglePlay();
     else if (action === 'previous') previousTrack();
+    else if (action === 'next') nextTrack(false);
     else if (action === 'toggle-shuffle') { shuffle = !shuffle; saveState(); render(); }
     else if (action === 'cycle-repeat') { repeatMode = repeatMode === 'off' ? 'all' : repeatMode === 'all' ? 'one' : 'off'; saveState(); render(); }
-    else if (action === 'open-playlist') { activePlaylistId = button.dataset.id; saveState(); render(); }
-    else if (action === 'close-playlist') { activePlaylistId = null; saveState(); render(); }
-    else if (action === 'play-playlist') playPlaylist(button.dataset.id, false);
-    else if (action === 'shuffle-playlist') playPlaylist(button.dataset.id, true);
-    else if (action === 'rename-playlist') renamePlaylist(button.dataset.id);
-    else if (action === 'delete-playlist') deletePlaylist(button.dataset.id);
-    else if (action === 'remove-from-playlist') { playlists = playlists.map((playlist) => playlist.id === button.dataset.playlistId ? { ...playlist, tracks: playlist.tracks.filter((track) => track.id !== button.dataset.trackId) } : playlist); savePlaylists(); render(); }
+    else if (action === 'play-queue') void loadTrack(queue[Number(button.dataset.index)], true);
+    else if (action === 'move-queue') moveQueue(Number(button.dataset.index), Number(button.dataset.direction));
+    else if (action === 'remove-queue') removeQueue(Number(button.dataset.index));
+    else if (action === 'clear-queue') { queue = []; current = null; player?.stopVideo(); playerState = -1; saveState(); render(); }
+    else if (action === 'open-playlist') { drawer.dataset.playlistId = button.dataset.playlistId; render(); }
+    else if (action === 'close-playlist') { delete drawer.dataset.playlistId; render(); }
+    else if (action === 'play-playlist') playPlaylist(button.dataset.playlistId, false);
+    else if (action === 'shuffle-playlist') playPlaylist(button.dataset.playlistId, true);
+    else if (action === 'rename-playlist') { const playlist = playlists.find((item) => item.id === button.dataset.playlistId); const name = playlist && prompt('Rename playlist', playlist.name)?.trim(); if (name) { playlist.name = name; savePlaylists(); render(); } }
+    else if (action === 'delete-playlist') { const playlist = playlists.find((item) => item.id === button.dataset.playlistId); if (playlist && confirm(`Delete playlist “${playlist.name}”?`)) { playlists = playlists.filter((item) => item.id !== playlist.id); delete drawer.dataset.playlistId; savePlaylists(); render(); } }
+    else if (action === 'remove-playlist-track') { playlists = playlists.map((playlist) => playlist.id === button.dataset.playlistId ? { ...playlist, tracks: playlist.tracks.filter((track) => track.videoId !== button.dataset.id) } : playlist); savePlaylists(); render(); }
+    else if (action === 'toggle-key') { const input = drawer.querySelector('input[name="apiKey"]'); input.type = input.type === 'password' ? 'text' : 'password'; button.textContent = input.type === 'password' ? 'Show' : 'Hide'; }
+    else if (action === 'clear-key') { apiKey = ''; localStorage.removeItem(API_KEY_KEY); status = 'Local API key removed.'; void checkConfiguration(); }
+    else if (action === 'reset-music' && confirm('Reset the YouTube queue, playlists, and player?')) { queue = []; playlists = []; current = null; results = []; query = ''; shuffle = false; repeatMode = 'off'; player?.stopVideo(); localStorage.removeItem(STATE_KEY); localStorage.removeItem(PLAYLISTS_KEY); render(); }
   }
 
   function handleInput(event) {
-    if (event.target.dataset.input === 'search') searchValue = event.target.value;
-    else if (event.target.dataset.input === 'seek') { audio.currentTime = Number(event.target.value) || 0; syncPlaybackUi(); }
-    else if (event.target.dataset.input === 'volume') { audio.volume = (Number(event.target.value) || 0) / 100; saveVolume(audio.volume); event.target.parentElement.querySelector('small').textContent = `${Math.round(audio.volume * 100)}%`; }
+    if (event.target.dataset.input === 'search') query = event.target.value;
+    else if (event.target.dataset.input === 'seek' && playerReady) player.seekTo(Number(event.target.value) || 0, true);
+    else if (event.target.dataset.input === 'volume') {
+      const volume = Number(event.target.value) || 0;
+      saveVolume(volume);
+      if (playerReady) player.setVolume(volume);
+      event.target.parentElement.querySelector('small').textContent = `${volume}%`;
+    }
   }
 
   function handleSubmit(event) {
     const form = event.target.closest('form');
     if (!form) return;
     event.preventDefault();
-    if (form.dataset.form === 'search') void searchTracks(searchValue.trim());
-    else if (form.dataset.form === 'create-playlist') createPlaylist(new FormData(form).get('playlistName')?.toString() || '');
+    if (form.dataset.form === 'search') void searchYouTube(query.trim());
+    else if (form.dataset.form === 'playlist') {
+      const name = new FormData(form).get('name')?.toString().trim();
+      if (name) { const playlist = { id: crypto.randomUUID?.() || `${Date.now()}`, name, tracks: [], createdAt: Date.now() }; playlists.push(playlist); drawer.dataset.playlistId = playlist.id; savePlaylists(); render(); }
+    } else if (form.dataset.form === 'api-key') {
+      const key = new FormData(form).get('apiKey')?.toString().trim() || '';
+      if (!key) { status = 'Paste a YouTube Data API v3 key first.'; render(); return; }
+      apiKey = key;
+      localStorage.setItem(API_KEY_KEY, apiKey);
+      status = 'API key saved in this browser.';
+      view = 'search';
+      render();
+      void searchYouTube('');
+    }
   }
 
-  audio.addEventListener('loadedmetadata', render);
-  audio.addEventListener('timeupdate', syncPlaybackUi);
-  audio.addEventListener('play', render);
-  audio.addEventListener('pause', render);
-  audio.addEventListener('ended', () => nextTrack(true));
-  audio.addEventListener('error', () => { status = 'This online track could not be streamed. Try another result.'; render(); });
-
-  if ('mediaSession' in navigator) {
-    try {
-      navigator.mediaSession.setActionHandler('play', () => void togglePlay());
-      navigator.mediaSession.setActionHandler('pause', () => void togglePlay());
-      navigator.mediaSession.setActionHandler('previoustrack', previousTrack);
-      navigator.mediaSession.setActionHandler('nexttrack', () => nextTrack(false));
-      navigator.mediaSession.setActionHandler('seekto', (details) => { if (typeof details.seekTime === 'number') audio.currentTime = details.seekTime; });
-    } catch {}
+  function handleKeydown(event) {
+    if (event.key === 'Escape' && document.body.classList.contains('luma-music-open')) setDrawer(false);
   }
 
-  new MutationObserver(() => { if (!shell) createInterface(); }).observe(document.documentElement, { childList: true, subtree: true });
+  function initialize() {
+    if (initialized) return;
+    initialized = true;
+    loadState();
+    if (!createInterface()) {
+      initialized = false;
+      return;
+    }
+    render();
+    if (current) pendingPlayback = { track: current, autoplay: false };
+    void checkConfiguration();
+  }
+
+  new MutationObserver(() => { if (!shell) initialize(); }).observe(document.documentElement, { childList: true, subtree: true });
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initialize, { once: true }); else initialize();
+  window.addEventListener('beforeunload', () => window.clearInterval(progressTimer));
 })();
