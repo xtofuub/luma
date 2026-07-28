@@ -1,0 +1,161 @@
+/* Local-first music library: search, playlists, queue, and full transport controls. */
+.luma-music-popover {
+  width: 430px;
+  max-height: min(720px, calc(100vh - 92px));
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.luma-library-player { position: relative; }
+.luma-library-player .luma-track-summary > i { width: 42px; height: 42px; flex-basis: 42px; }
+.luma-library-player .luma-track-summary strong { font-size: 12px; }
+.luma-library-player .luma-track-summary small { font-size: 9px; }
+.luma-library-player .luma-transport { margin-top: 10px; }
+.luma-library-player .luma-range { margin-top: 9px; }
+
+.luma-library-tabs {
+  margin-top: 13px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--panel);
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 3px;
+}
+.luma-library-tabs button {
+  min-width: 0;
+  height: 31px;
+  padding: 0 7px;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  font-size: 9px;
+  font-weight: 500;
+}
+.luma-library-tabs button:hover { color: var(--text); }
+.luma-library-tabs button.active { background: var(--paper); color: var(--text); box-shadow: inset 0 0 0 1px var(--line-soft), 0 1px 2px rgba(0,0,0,.04); }
+.luma-library-tabs small { min-width: 15px; height: 15px; padding: 0 4px; border-radius: 999px; background: var(--hover); color: var(--faint); display: grid; place-items: center; font-size: 7px; }
+.luma-library-tabs button.active small { background: var(--accent-soft); color: var(--accent); }
+
+.luma-music-view { margin-top: 10px; }
+.luma-library-toolbar { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; }
+.luma-library-search {
+  height: 34px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--panel);
+  color: var(--faint);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.luma-library-search:focus-within { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+.luma-library-search input { width: 100%; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--text); font-size: 10px; }
+.luma-library-search button { width: 22px; height: 22px; padding: 0; border-radius: 5px; background: transparent; color: var(--faint); display: grid; place-items: center; }
+.luma-library-search button:hover { background: var(--hover); color: var(--text); }
+.luma-library-toolbar > button { height: 34px; padding: 0 10px; border: 1px solid var(--line); border-radius: 7px; background: var(--paper); color: var(--muted); display: flex; align-items: center; gap: 6px; font-size: 9px; }
+.luma-library-toolbar > button:hover { background: var(--hover); color: var(--text); }
+
+.luma-library-meta, .luma-queue-header { height: 27px; padding: 0 3px; display: flex; align-items: center; justify-content: space-between; color: var(--faint); font-size: 8px; text-transform: uppercase; letter-spacing: .08em; }
+.luma-library-meta button, .luma-queue-header button { padding: 3px 0; background: transparent; color: var(--faint); font-size: 8px; letter-spacing: 0; text-transform: none; }
+.luma-library-meta button:hover, .luma-queue-header button:hover { color: var(--danger); }
+
+.luma-track-list { min-width: 0; display: grid; gap: 3px; }
+.luma-track-block { min-width: 0; border-radius: 8px; }
+.luma-track-block.active, .luma-library-track.active { background: var(--hover); }
+.luma-library-track { min-width: 0; min-height: 42px; padding: 4px; border-radius: 8px; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 4px; }
+.luma-library-track:hover { background: var(--hover); }
+.luma-track-main { min-width: 0; height: 34px; padding: 0 7px; border-radius: 6px; background: transparent; display: grid; grid-template-columns: 23px minmax(0, 1fr); align-items: center; gap: 7px; text-align: left; }
+.luma-track-main > span:first-child { width: 23px; height: 23px; border-radius: 7px; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; }
+.luma-track-main > span:last-child { min-width: 0; display: grid; gap: 2px; }
+.luma-track-main strong, .luma-track-main small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.luma-track-main strong { color: var(--text); font-size: 10px; font-weight: 600; }
+.luma-track-main small { color: var(--faint); font-size: 8px; }
+.luma-track-actions { display: flex; align-items: center; gap: 1px; opacity: .15; transition: opacity .12s ease; }
+.luma-library-track:hover .luma-track-actions, .luma-library-track.active .luma-track-actions, .luma-track-actions:focus-within { opacity: 1; }
+.luma-track-actions button { width: 25px; height: 25px; padding: 0; border-radius: 6px; background: transparent; color: var(--faint); display: grid; place-items: center; }
+.luma-track-actions button:hover, .luma-track-actions button.active { background: var(--paper); color: var(--text); }
+.luma-track-actions button.active { color: var(--accent); }
+
+.luma-playlist-picker { margin: 0 5px 6px 39px; padding: 7px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); box-shadow: 0 9px 28px rgba(0,0,0,.06); display: grid; gap: 3px; }
+.luma-playlist-picker > div { min-height: 25px; padding: 0 3px; display: flex; align-items: center; justify-content: space-between; }
+.luma-playlist-picker > div strong { color: var(--text); font-size: 9px; font-weight: 600; }
+.luma-playlist-picker > div button { width: 22px; height: 22px; padding: 0; border-radius: 5px; background: transparent; color: var(--faint); display: grid; place-items: center; }
+.luma-playlist-picker > button { min-height: 29px; padding: 0 8px; border-radius: 6px; background: transparent; color: var(--muted); display: flex; align-items: center; justify-content: space-between; font-size: 9px; text-align: left; }
+.luma-playlist-picker > button:hover, .luma-playlist-picker > button.active { background: var(--hover); color: var(--text); }
+.luma-playlist-picker > button.active { color: var(--accent); }
+.luma-playlist-picker small { color: var(--faint); font-size: 8px; }
+.luma-playlist-picker p { margin: 5px; color: var(--faint); font-size: 8px; line-height: 1.5; }
+
+.luma-library-empty { min-height: 150px; padding: 23px 16px; border: 1px dashed var(--line); border-radius: 9px; background: var(--panel); color: var(--muted); display: grid; align-content: center; justify-items: center; gap: 6px; text-align: center; }
+.luma-library-empty strong { color: var(--text); font-size: 11px; font-weight: 600; }
+.luma-library-empty small { max-width: 260px; color: var(--faint); font-size: 9px; line-height: 1.45; }
+.luma-library-empty button { height: 29px; margin-top: 4px; padding: 0 10px; border: 1px solid var(--line); border-radius: 7px; background: var(--paper); color: var(--text); font-size: 9px; }
+.luma-library-empty button:hover { background: var(--hover); }
+
+.luma-queue-list { display: grid; gap: 3px; }
+.luma-queue-item { min-width: 0; height: 40px; padding: 3px; border-radius: 7px; display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: 2px; }
+.luma-queue-item:hover, .luma-queue-item.active { background: var(--hover); }
+.luma-queue-track { min-width: 0; height: 34px; padding: 0 6px; border-radius: 5px; background: transparent; display: grid; grid-template-columns: 20px minmax(0,1fr); align-items: center; gap: 6px; text-align: left; }
+.luma-queue-icon { width: 20px; height: 20px; border-radius: 6px; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; }
+.luma-queue-copy { min-width: 0; display: grid; gap: 1px; }
+.luma-queue-copy strong, .luma-queue-copy small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.luma-queue-copy strong { color: var(--text); font-size: 10px; font-weight: 500; }
+.luma-queue-copy small { color: var(--faint); font-size: 8px; }
+.luma-queue-actions { display: flex; opacity: 0; }
+.luma-queue-item:hover .luma-queue-actions, .luma-queue-item.active .luma-queue-actions, .luma-queue-actions:focus-within { opacity: 1; }
+.luma-queue-actions button { width: 23px; height: 23px; padding: 0; border-radius: 5px; background: transparent; color: var(--faint); display: grid; place-items: center; }
+.luma-queue-actions button:hover:not(:disabled) { background: var(--paper); color: var(--text); }
+
+.luma-playlist-create { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 6px; }
+.luma-playlist-create input { height: 34px; padding: 0 9px; border: 1px solid var(--line); border-radius: 7px; outline: 0; background: var(--panel); color: var(--text); font-size: 10px; }
+.luma-playlist-create input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+.luma-playlist-create button { height: 34px; padding: 0 10px; border: 1px solid var(--line); border-radius: 7px; background: var(--paper); color: var(--text); display: flex; align-items: center; gap: 5px; font-size: 9px; }
+.luma-playlist-list { margin-top: 9px; display: grid; gap: 4px; }
+.luma-playlist-card { min-width: 0; min-height: 48px; padding: 4px; border: 1px solid transparent; border-radius: 8px; display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: 4px; }
+.luma-playlist-card:hover { border-color: var(--line-soft); background: var(--hover); }
+.luma-playlist-open { min-width: 0; padding: 0 6px; background: transparent; display: grid; grid-template-columns: 34px minmax(0,1fr); align-items: center; gap: 8px; text-align: left; }
+.luma-playlist-open i { width: 34px; height: 34px; border-radius: 8px; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; }
+.luma-playlist-open span { min-width: 0; display: grid; gap: 2px; }
+.luma-playlist-open strong, .luma-playlist-open small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.luma-playlist-open strong { color: var(--text); font-size: 10px; font-weight: 600; }
+.luma-playlist-open small { color: var(--faint); font-size: 8px; }
+.luma-playlist-card > div { display: flex; opacity: .2; }
+.luma-playlist-card:hover > div, .luma-playlist-card > div:focus-within { opacity: 1; }
+.luma-playlist-card > div button { width: 25px; height: 25px; padding: 0; border-radius: 6px; background: transparent; color: var(--faint); display: grid; place-items: center; }
+.luma-playlist-card > div button:hover { background: var(--paper); color: var(--text); }
+
+.luma-playlist-detail-heading { min-height: 38px; margin-bottom: 6px; display: grid; grid-template-columns: 28px minmax(0,1fr) auto; align-items: center; gap: 7px; }
+.luma-playlist-detail-heading > button { width: 28px; height: 28px; padding: 0; border-radius: 6px; background: transparent; color: var(--muted); display: grid; place-items: center; }
+.luma-playlist-detail-heading > button:hover { background: var(--hover); color: var(--text); }
+.luma-playlist-detail-heading > div:nth-child(2) { min-width: 0; display: grid; gap: 2px; }
+.luma-playlist-detail-heading strong { overflow: hidden; color: var(--text); font-size: 11px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.luma-playlist-detail-heading small { color: var(--faint); font-size: 8px; }
+.luma-playlist-detail-heading > div:last-child { display: flex; gap: 4px; }
+.luma-playlist-detail-heading > div:last-child button { height: 28px; padding: 0 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--paper); color: var(--muted); display: flex; align-items: center; gap: 5px; font-size: 8px; }
+.luma-playlist-detail-heading > div:last-child button:hover:not(:disabled) { background: var(--hover); color: var(--text); }
+
+.luma-library-status { margin: 10px 2px 0; color: var(--muted); font-size: 9px; line-height: 1.4; }
+.luma-drop-overlay { position: absolute; inset: 7px; z-index: 10; border: 1px dashed var(--accent); border-radius: 9px; background: color-mix(in srgb, var(--paper) 92%, transparent); color: var(--accent); display: none; place-content: center; justify-items: center; gap: 7px; backdrop-filter: blur(7px); }
+.luma-drop-overlay strong { font-size: 11px; }
+.luma-music-popover.is-dragging .luma-drop-overlay { display: grid; }
+.luma-music-popover { position: absolute; }
+
+@media (max-width: 700px) {
+  .luma-music-popover { width: min(430px, calc(100% - 20px)); max-height: calc(100dvh - 76px); }
+  .luma-track-actions, .luma-queue-actions, .luma-playlist-card > div { opacity: 1; }
+}
+
+@media (max-width: 470px) {
+  .luma-library-tabs button span { display: none; }
+  .luma-library-toolbar > button span { display: none; }
+  .luma-library-toolbar > button { width: 34px; padding: 0; justify-content: center; }
+  .luma-track-actions button:nth-child(2) { display: none; }
+  .luma-playlist-picker { margin-left: 5px; }
+}
