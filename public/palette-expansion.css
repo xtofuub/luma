@@ -1,0 +1,26 @@
+/* Extra Luma palettes: deep blue Midnight and near-black Obsidian. */
+:root[data-palette='midnight'][data-theme='light']{
+  --canvas:#dfe4ef;--paper:#f8f9fc;--panel:#eef1f7;--text:#1c2130;--muted:#677087;--faint:#98a0b2;
+  --line:#ccd3e1;--line-soft:#dfe4ed;--hover:#e7ebf3;--accent:#6476a6;--accent-soft:#dfe5f2;--danger:#a34e57;
+  --shadow:0 1px 2px rgba(22,27,40,.05),0 20px 48px rgba(22,27,40,.08)
+}
+:root[data-palette='midnight'][data-theme='dark']{
+  color-scheme:dark;--canvas:#0a0d14;--paper:#111621;--panel:#0e131c;--text:#eef2fb;--muted:#9ca7be;--faint:#5f687c;
+  --line:#263044;--line-soft:#1d2636;--hover:#182132;--accent:#a9b9ee;--accent-soft:#1d2946;--danger:#df8a93;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 26px 70px rgba(0,0,0,.36)
+}
+:root[data-palette='obsidian'][data-theme='light']{
+  --canvas:#e5e6e4;--paper:#fbfbfa;--panel:#f1f2f0;--text:#1b1d1d;--muted:#6e7372;--faint:#9da2a0;
+  --line:#d3d6d4;--line-soft:#e3e5e3;--hover:#e9ebe9;--accent:#397d88;--accent-soft:#dcecee;--danger:#a24646;
+  --shadow:0 1px 2px rgba(12,14,14,.05),0 20px 48px rgba(12,14,14,.08)
+}
+:root[data-palette='obsidian'][data-theme='dark']{
+  color-scheme:dark;--canvas:#050606;--paper:#090a0a;--panel:#0d0f0f;--text:#f3f5f4;--muted:#9aa09e;--faint:#555b59;
+  --line:#242828;--line-soft:#171a1a;--hover:#121616;--accent:#74c7d4;--accent-soft:#102529;--danger:#e07a7a;
+  --shadow:0 1px 2px rgba(0,0,0,.7),0 28px 80px rgba(0,0,0,.62)
+}
+:root[data-palette='obsidian'][data-theme='dark'] body,:root[data-palette='obsidian'][data-theme='dark'] #root,:root[data-palette='obsidian'][data-theme='dark'] .app{background:#050606}
+:root[data-palette='obsidian'][data-theme='dark'] ::selection{background:rgba(116,199,212,.28);color:#fff}
+:root[data-palette='obsidian'][data-theme='dark'] .writing-page,:root[data-palette='obsidian'][data-theme='dark'] .library-panel,:root[data-palette='obsidian'][data-theme='dark'] .luma-music-drawer{border-color:#202424}
+.luma-palette-grid button:not(.active)>svg{display:none}
+.luma-palette-grid .luma-extended-palette>svg{color:var(--accent)}
