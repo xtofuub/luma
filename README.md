@@ -4,7 +4,7 @@ A quiet writing space for essays, poems, notes, and long-form drafts.
 
 **Live app:** https://luma-one-theta.vercel.app
 
-Luma is designed to feel like a page, not a dashboard. It keeps the interface restrained while providing practical tools for managing writing projects and listening to online music.
+Luma is designed to feel like a page, not a dashboard. It keeps the interface restrained while providing practical tools for managing writing projects and listening to music.
 
 ## Features
 
@@ -23,19 +23,20 @@ Luma is designed to feel like a page, not a dashboard. It keeps the interface re
 - Six color palettes, each with light and dark variants
 - Configurable library, document-detail, and writing-stat panels
 
-### Online music player
+### YouTube music panel
 
-- Online track search and weekly trending music powered by Audius
-- Direct in-app streaming without Spotify Premium or a Spotify Client ID
+- Clean right-side music drawer
+- Search songs, artists, mixes, and playlists with YouTube Data API v3
+- Popular music view based on the viewer's region
+- Embedded YouTube playback controlled through the IFrame Player API
+- Play, pause, previous, next, seek, volume, shuffle, repeat-all, and repeat-one
+- Queue management and manual reordering
 - Create, rename, play, shuffle, and delete Luma playlists
-- Add and remove online tracks from playlists
-- Queue tracks and reorder what plays next
-- Play, pause, previous, next, seek, volume, shuffle, repeat-all, and repeat-one controls
-- Compact music controls remain available in focus mode
-- Browser Media Session support for operating-system media controls
-- Album artwork and artist information
+- Compact playback controls remain available in focus mode
+- API key settings inside the music drawer
+- Supports either a browser-local key or a shared `YOUTUBE_API_KEY` Vercel environment variable
 
-The available catalog is Audius's open music catalog rather than Spotify's or YouTube's full catalog. Search and track streaming use Luma's `/api/audius` Vercel function and Audius's official API.
+The API key is used only for YouTube search and metadata. Video playback uses YouTube's official embedded player.
 
 ### Document library
 
@@ -53,7 +54,7 @@ The available catalog is Audius's open music catalog rather than Spotify's or Yo
 - Export every document and preference as a portable JSON backup
 - Restore a complete Luma backup in another browser
 
-Luma does not send document content to a server. Writing, settings, music queues, and Luma playlists remain in browser storage. Music audio streams from Audius.
+Luma does not send document content to a server. Writing, settings, queues, playlists, and an optional browser-local YouTube API key remain in browser storage.
 
 ## Keyboard shortcuts
 
@@ -90,11 +91,16 @@ npm run preview
 - Vite
 - Lucide icons
 - Plain CSS
-- Browser Audio and Media Session APIs
-- Vercel serverless function for Audius search
+- YouTube Data API v3
+- YouTube IFrame Player API
+- Vercel serverless function for YouTube search
 
-An optional `AUDIUS_API_KEY` environment variable can be added later for higher Audius API rate limits. The current read-only player works without requiring users to sign in.
+## YouTube configuration
+
+Open the music drawer and select **Settings** to save a YouTube Data API v3 key in the current browser. For a shared deployment, add `YOUTUBE_API_KEY` to the Vercel project's environment variables and redeploy.
+
+Restrict the key to the YouTube Data API v3 in Google Cloud. Do not commit the key to GitHub.
 
 ## Local data
 
-Luma stores writing, preferences, playlists, and queues under the browser origin where the app is opened. Clearing site data removes them. Use **Export local backup** from the document menu to protect writing.
+Luma stores writing, preferences, queues, and playlists under the browser origin where the app is opened. Clearing site data removes them. Use **Export local backup** from the document menu to protect writing.
