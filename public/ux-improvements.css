@@ -171,3 +171,14 @@
   .app.focus-mode .page-layout.library-hidden { width: calc(100% - 10px); padding: 5px 0; }
   .app.focus-mode .writing-page { min-height: calc(100dvh - 10px); padding: 42px 25px 22px; }
 }
+
+html.luma-hide-library .library-panel,
+html.luma-hide-library .library-backdrop,
+html.luma-hide-library .library-toggle { display: none !important; }
+html.luma-hide-library .page-layout { grid-template-columns: minmax(0, 760px); }
+html.luma-hide-details .page-meta { display: none !important; }
+html.luma-hide-details .title-field { margin-top: 0; }
+html.luma-hide-stats .document-stats { display: none !important; }
+@media (max-width: 900px) {
+  html.luma-hide-library .page-layout { grid-template-columns: 1fr; }
+}
