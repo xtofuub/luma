@@ -66,14 +66,6 @@
       if (!previous || !play || !next) return;
 
       enhancing = true;
-      const artwork = document.createElement('div');
-      artwork.className = 'luma-focus-artwork';
-      artwork.setAttribute('aria-hidden', 'true');
-      artwork.innerHTML = '<img alt=""><span>♪</span>';
-
-      const copy = document.createElement('div');
-      copy.className = 'luma-focus-copy';
-      copy.innerHTML = `<strong>${escapeHtml(title)}</strong><div><span data-focus-channel>YouTube</span><i></i><small data-focus-time>${escapeHtml(time)}</small></div>`;
 
       const controls = document.createElement('div');
       controls.className = 'luma-focus-controls';
@@ -85,12 +77,21 @@
       next.title = 'Next';
       controls.append(previous, play, next);
 
+      const copy = document.createElement('div');
+      copy.className = 'luma-focus-copy';
+      copy.innerHTML = `<strong>${escapeHtml(title)}</strong><div><span data-focus-channel>YouTube</span><i></i><small data-focus-time>${escapeHtml(time)}</small></div>`;
+
+      const artwork = document.createElement('div');
+      artwork.className = 'luma-focus-artwork';
+      artwork.setAttribute('aria-hidden', 'true');
+      artwork.innerHTML = '<img alt=""><span>♪</span>';
+
       const progress = document.createElement('div');
       progress.className = 'luma-focus-progress';
       progress.setAttribute('aria-hidden', 'true');
       progress.innerHTML = '<i></i>';
 
-      focusPlayer.replaceChildren(artwork, copy, controls, progress);
+      focusPlayer.replaceChildren(controls, copy, artwork, progress);
       focusPlayer.classList.add('luma-focus-polished');
       enhancing = false;
     }
