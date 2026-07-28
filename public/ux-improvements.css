@@ -1,0 +1,173 @@
+/* Luma UX improvements: configurable panels, repaired focus mode, Spotify controller. */
+.active-control { color: var(--text); background: var(--hover); }
+
+.view-popover { width: 224px; }
+.view-popover > p {
+  margin: 5px 10px 7px;
+  color: var(--faint);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+.view-toggle { justify-content: flex-start; }
+.toggle-mark {
+  width: 17px;
+  height: 17px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  display: grid;
+  place-items: center;
+  color: var(--paper);
+}
+.toggle-mark.enabled { border-color: var(--accent); background: var(--accent); }
+
+.page-layout.library-hidden { grid-template-columns: minmax(0, 760px); }
+.title-field.details-hidden { margin-top: 0; }
+
+.app.focus-mode {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  overflow: auto;
+  min-height: 0;
+  background: var(--canvas);
+}
+.app.focus-mode .app-header,
+.app.focus-mode .library-panel,
+.app.focus-mode .library-backdrop,
+.app.focus-mode .spotify-panel,
+.app.focus-mode .luma-tool {
+  display: none !important;
+}
+.app.focus-mode .page-layout,
+.app.focus-mode .page-layout.library-hidden {
+  width: min(860px, calc(100% - 28px));
+  min-height: 100dvh;
+  margin: 0 auto;
+  padding: 14px 0;
+  display: block;
+}
+.app.focus-mode .writing-page {
+  width: 100%;
+  min-height: calc(100dvh - 28px);
+  margin: 0;
+  padding: 68px 86px 30px;
+}
+
+.spotify-panel {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 42;
+  width: min(330px, calc(100vw - 36px));
+  max-height: min(640px, calc(100dvh - 36px));
+  overflow: auto;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--paper) 94%, transparent);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(18px);
+}
+.spotify-heading,
+.spotify-heading > div,
+.spotify-heading-actions,
+.spotify-controls,
+.spotify-volume,
+.spotify-disconnect,
+.spotify-primary {
+  display: flex;
+  align-items: center;
+}
+.spotify-heading { justify-content: space-between; gap: 12px; }
+.spotify-heading > div:first-child { gap: 7px; color: var(--text); font-size: 11px; font-weight: 600; }
+.spotify-heading-actions { gap: 3px; }
+.spotify-heading button,
+.spotify-controls button {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  display: grid;
+  place-items: center;
+}
+.spotify-heading button:hover,
+.spotify-controls button:hover:not(:disabled) { background: var(--hover); color: var(--text); }
+.spotify-connect { padding: 18px 3px 3px; display: grid; gap: 13px; }
+.spotify-connect p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.55; }
+.spotify-connect label { display: grid; gap: 6px; }
+.spotify-connect label span { color: var(--faint); font-size: 9px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
+.spotify-connect input {
+  width: 100%;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  outline: 0;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 11px;
+}
+.spotify-connect input:focus { border-color: var(--accent); }
+.spotify-primary {
+  min-height: 35px;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 7px;
+  background: var(--accent);
+  color: var(--paper);
+  font-size: 11px;
+  font-weight: 600;
+}
+.spotify-connect small { color: var(--faint); font-size: 9px; line-height: 1.55; overflow-wrap: anywhere; }
+.spotify-player { padding: 15px 2px 2px; display: grid; gap: 13px; }
+.spotify-track { display: grid; grid-template-columns: 48px minmax(0, 1fr); align-items: center; gap: 11px; }
+.spotify-artwork {
+  width: 48px;
+  height: 48px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--faint);
+  display: grid;
+  place-items: center;
+}
+.spotify-artwork img { width: 100%; height: 100%; object-fit: cover; }
+.spotify-track > div:last-child { min-width: 0; display: grid; gap: 3px; }
+.spotify-track strong,
+.spotify-track span,
+.spotify-track small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.spotify-track strong { color: var(--text); font-size: 11px; font-weight: 600; }
+.spotify-track span { color: var(--muted); font-size: 9px; }
+.spotify-track small { color: var(--faint); font-size: 8px; }
+.spotify-progress { display: grid; gap: 5px; }
+.spotify-progress i { height: 3px; overflow: hidden; border-radius: 10px; background: var(--line); }
+.spotify-progress b { display: block; height: 100%; border-radius: inherit; background: var(--accent); }
+.spotify-progress span { color: var(--faint); font-size: 8px; text-align: right; font-variant-numeric: tabular-nums; }
+.spotify-controls { justify-content: center; gap: 7px; }
+.spotify-controls .spotify-play { width: 38px; height: 38px; border-radius: 50%; background: var(--text); color: var(--paper); }
+.spotify-controls .spotify-play:hover:not(:disabled) { background: var(--text); color: var(--paper); transform: scale(1.03); }
+.spotify-volume { gap: 8px; color: var(--faint); }
+.spotify-volume input { min-width: 0; flex: 1; accent-color: var(--accent); }
+.spotify-volume span { width: 22px; color: var(--muted); font-size: 9px; text-align: right; font-variant-numeric: tabular-nums; }
+.spotify-disconnect { width: max-content; margin: 0 auto; padding: 4px 7px; gap: 5px; background: transparent; color: var(--faint); font-size: 9px; }
+.spotify-disconnect:hover { color: var(--danger); }
+.spotify-error { margin: 10px 3px 2px; color: var(--danger); font-size: 9px; line-height: 1.45; }
+.spin { animation: luma-spin .8s linear infinite; }
+@keyframes luma-spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 900px) {
+  .page-layout.library-hidden { grid-template-columns: 1fr; }
+  .spotify-panel { right: 12px; bottom: 12px; width: min(320px, calc(100vw - 24px)); }
+  .app.focus-mode .writing-page { padding: 60px 54px 28px; }
+}
+
+@media (max-width: 560px) {
+  .spotify-panel { right: 6px; bottom: 6px; width: calc(100vw - 12px); max-height: calc(100dvh - 12px); }
+  .app.focus-mode .page-layout,
+  .app.focus-mode .page-layout.library-hidden { width: calc(100% - 10px); padding: 5px 0; }
+  .app.focus-mode .writing-page { min-height: calc(100dvh - 10px); padding: 42px 25px 22px; }
+}
