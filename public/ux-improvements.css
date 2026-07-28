@@ -8,14 +8,44 @@
 .page-layout.library-hidden { grid-template-columns: minmax(0, 760px); }
 .title-field.details-hidden { margin-top: 0; }
 
-.app.focus-mode { position: fixed; inset: 0; z-index: 90; overflow: auto; min-height: 0; background: var(--canvas); }
+.app.focus-mode {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  overflow: auto;
+  min-height: 0;
+  background: var(--canvas) !important;
+  color: var(--text) !important;
+}
 .app.focus-mode .app-header,
 .app.focus-mode .library-panel,
 .app.focus-mode .library-backdrop,
 .app.focus-mode .luma-tool { display: none !important; }
 .app.focus-mode .page-layout,
-.app.focus-mode .page-layout.library-hidden { width: min(860px, calc(100% - 28px)); min-height: 100dvh; margin: 0 auto; padding: 14px 0; display: block; }
-.app.focus-mode .writing-page { width: 100%; min-height: calc(100dvh - 28px); margin: 0; padding: 68px 86px 30px; }
+.app.focus-mode .page-layout.library-hidden {
+  width: min(860px, calc(100% - 28px));
+  min-height: 100dvh;
+  margin: 0 auto;
+  padding: 14px 0;
+  display: block;
+  background: var(--canvas) !important;
+  color: var(--text) !important;
+}
+.app.focus-mode .writing-page {
+  width: 100%;
+  min-height: calc(100dvh - 28px);
+  margin: 0;
+  padding: 68px 86px 30px;
+  background: var(--paper) !important;
+  border-color: var(--line) !important;
+  color: var(--text) !important;
+  box-shadow: var(--shadow) !important;
+}
+.app.focus-mode .title-field,
+.app.focus-mode .editor-field { color: var(--text) !important; }
+.app.focus-mode .page-meta,
+.app.focus-mode .document-stats { color: var(--muted) !important; }
+.app.focus-mode .document-stats { border-color: var(--line-soft) !important; }
 
 html.luma-hide-library .library-panel,
 html.luma-hide-library .library-backdrop,
