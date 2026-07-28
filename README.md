@@ -1,10 +1,10 @@
 # Luma
 
-A quiet, local-first writing space for essays, poems, notes, and long-form drafts.
+A quiet writing space for essays, poems, notes, and long-form drafts.
 
 **Live app:** https://luma-one-theta.vercel.app
 
-Luma is designed to feel like a page, not a dashboard. It keeps the interface restrained while providing the practical tools needed to manage writing projects and listen to a private local music library.
+Luma is designed to feel like a page, not a dashboard. It keeps the interface restrained while providing practical tools for managing writing projects and listening to online music.
 
 ## Features
 
@@ -23,21 +23,19 @@ Luma is designed to feel like a page, not a dashboard. It keeps the interface re
 - Six color palettes, each with light and dark variants
 - Configurable library, document-detail, and writing-stat panels
 
-### Local music library
+### Online music player
 
-- Import individual audio files or an entire folder
-- Drag and drop audio files into the player
-- Search imported tracks by title or artist
-- Persistent browser storage using IndexedDB
-- Create, rename, play, shuffle, and delete playlists
-- Add and remove tracks from playlists
+- Online track search and weekly trending music powered by Audius
+- Direct in-app streaming without Spotify Premium or a Spotify Client ID
+- Create, rename, play, shuffle, and delete Luma playlists
+- Add and remove online tracks from playlists
 - Queue tracks and reorder what plays next
 - Play, pause, previous, next, seek, volume, shuffle, repeat-all, and repeat-one controls
 - Compact music controls remain available in focus mode
 - Browser Media Session support for operating-system media controls
-- Duplicate-file detection during import
+- Album artwork and artist information
 
-Supported browser-playable formats include MP3, WAV, FLAC, M4A, AAC, OGG, Opus, and WebM audio. Actual codec support depends on the browser.
+The available catalog is Audius's open music catalog rather than Spotify's or YouTube's full catalog. Search and track streaming use Luma's `/api/audius` Vercel function and Audius's official API.
 
 ### Document library
 
@@ -55,7 +53,7 @@ Supported browser-playable formats include MP3, WAV, FLAC, M4A, AAC, OGG, Opus, 
 - Export every document and preference as a portable JSON backup
 - Restore a complete Luma backup in another browser
 
-Luma does not send document content or imported music to a server. Writing and preferences use browser storage, while music files use IndexedDB on the current browser and origin.
+Luma does not send document content to a server. Writing, settings, music queues, and Luma playlists remain in browser storage. Music audio streams from Audius.
 
 ## Keyboard shortcuts
 
@@ -92,10 +90,11 @@ npm run preview
 - Vite
 - Lucide icons
 - Plain CSS
-- IndexedDB and the browser Audio API
+- Browser Audio and Media Session APIs
+- Vercel serverless function for Audius search
 
-No backend, account system, analytics SDK, streaming-service login, or API key is required.
+An optional `AUDIUS_API_KEY` environment variable can be added later for higher Audius API rate limits. The current read-only player works without requiring users to sign in.
 
 ## Local data
 
-Luma stores data under the browser origin where the app is opened. Clearing site data removes locally stored documents, settings, playlists, and imported music. Use **Export local backup** from the document menu to protect writing; imported audio should also remain available in its original folder.
+Luma stores writing, preferences, playlists, and queues under the browser origin where the app is opened. Clearing site data removes them. Use **Export local backup** from the document menu to protect writing.
