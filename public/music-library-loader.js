@@ -3,6 +3,7 @@
 
   const ORIGINAL_SOURCE = '/music-library.js';
   const AUTO_QUEUE_PATTERN = /^\s*if \(!queue\.some\(\(item\) => sameTrack\(item, track\)\)\) queue\.push\(track\);\s*$/m;
+  const SEARCH_LIMIT_PATTERN = /const params = new URLSearchParams\(\{ limit: '12', region \}\);/;
 
   function labelAction(button, label, tooltip) {
     button.classList.add('luma-track-action');
@@ -78,8 +79,15 @@
       if (!AUTO_QUEUE_PATTERN.test(original)) {
         throw new Error('The automatic queue line could not be found.');
       }
+      if (!SEARCH_LIMIT_PATTERN.test(original)) {
+        throw new Error('The YouTube search result limit could not be found.');
+      }
 
-      const patched = original.replace(AUTO_QUEUE_PATTERN, '');
+      const patched = original
+        .replace(AUTO_QUEUE_PATTERN, '')
+        .replace(SEARCH_LIMIT_PATTERN, "const params = new URLSearchParams({ limit: '30', region });")
+        .replace('No embeddable music videos matched that search.', 'No playable YouTube videos matched that search.');
+
       Function(`${patched}\n//# sourceURL=luma-music-library-patched.js`)();
       watchMusicUi();
     } catch (error) {
