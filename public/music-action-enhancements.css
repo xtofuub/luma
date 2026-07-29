@@ -1,0 +1,106 @@
+/* Clear, persistent track actions for Queue and Playlists. */
+.luma-youtube-result > div {
+  gap: 5px;
+  opacity: 1 !important;
+}
+
+.luma-youtube-result > div .luma-track-action {
+  position: relative;
+  width: auto !important;
+  min-width: 62px;
+  height: 29px !important;
+  padding: 0 8px !important;
+  border: 1px solid var(--line-soft);
+  border-radius: 7px;
+  background: var(--paper) !important;
+  color: var(--muted) !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .03);
+  transition: border-color .12s ease, background .12s ease, color .12s ease, transform .12s ease;
+}
+
+.luma-youtube-result > div .luma-track-action:hover,
+.luma-youtube-result > div .luma-track-action:focus-visible {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+  background: var(--accent-soft) !important;
+  color: var(--accent) !important;
+  transform: translateY(-1px);
+}
+
+.luma-youtube-result > div .luma-track-action.active {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+  background: var(--accent-soft) !important;
+  color: var(--accent) !important;
+}
+
+.luma-track-action-label {
+  font-size: 8px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.luma-track-action[data-tooltip]::after {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 7px);
+  z-index: 140;
+  max-width: 180px;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--text);
+  color: var(--paper);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .16);
+  content: attr(data-tooltip);
+  font-size: 8px;
+  font-weight: 500;
+  line-height: 1.25;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(3px);
+  transition: opacity .12s ease, transform .12s ease;
+}
+
+.luma-track-action[data-tooltip]:hover::after,
+.luma-track-action[data-tooltip]:focus-visible::after {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Leave enough room for the labeled action pills without crushing track titles. */
+.luma-youtube-result-main {
+  grid-template-columns: 58px minmax(0, 1fr);
+}
+
+.luma-youtube-result-main img {
+  width: 58px;
+  height: 33px;
+}
+
+@media (max-width: 440px) {
+  .luma-youtube-result > div button:nth-child(2) {
+    display: inline-flex !important;
+  }
+
+  .luma-youtube-result > div .luma-track-action {
+    min-width: 31px;
+    width: 31px !important;
+    padding: 0 !important;
+  }
+
+  .luma-track-action-label {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .luma-youtube-result > div .luma-track-action,
+  .luma-track-action[data-tooltip]::after {
+    transition: none;
+  }
+}
