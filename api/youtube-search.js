@@ -1,5 +1,6 @@
 const YOUTUBE_API = 'https://www.googleapis.com/youtube/v3';
 const MAX_RESULTS = 15;
+const MAX_SEARCH_POOL = 40;
 
 function decodeEntities(value = '') {
   return String(value)
@@ -30,6 +31,32 @@ function normalizeVideo(item) {
     duration: parseDuration(item.contentDetails?.duration),
     publishedAt: item.snippet.publishedAt || '',
   };
+}
+
+function firstValue(value) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function firstHeader(value) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function resolveRegion(request) {
+  const geoCountry = String(firstHeader(request.headers['x-vercel-ip-country']) || '').toUpperCase();
+  if (/^[A-Z]{2}$/.test(geoCountry)) return geoCountry;
+
+  const requested = String(firstValue(request.query?.region) || '').toUpperCase();
+  if (/^[A-Z]{2}$/.test(requested)) return requested;
+  return 'US';
+}
+
+function resolveLanguage(request) {
+  const requested = String(firstValue(request.query?.language) || '').trim().toLowerCase();
+  if (/^[a-z]{2,3}$/.test(requested)) return requested;
+
+  const acceptLanguage = String(firstHeader(request.headers['accept-language']) || '');
+  const browserLanguage = acceptLanguage.split(',')[0]?.trim().split('-')[0]?.toLowerCase();
+  return /^[a-z]{2,3}$/.test(browserLanguage || '') ? browserLanguage : 'en';
 }
 
 async function youtube(path, params, key) {
@@ -69,28 +96,31 @@ export default async function handler(request, response) {
     });
   }
 
-  const rawQuery = Array.isArray(request.query?.q) ? request.query.q[0] : request.query?.q;
-  const query = String(rawQuery || '').trim().slice(0, 120);
-  const requestedLimit = Number(Array.isArray(request.query?.limit) ? request.query.limit[0] : request.query?.limit);
+  const query = String(firstValue(request.query?.q) || '').trim().slice(0, 120);
+  const requestedLimit = Number(firstValue(request.query?.limit));
   const maxResults = Math.min(MAX_RESULTS, Math.max(1, Number.isFinite(requestedLimit) ? requestedLimit : 12));
-  const rawRegion = String(Array.isArray(request.query?.region) ? request.query.region[0] : request.query?.region || 'US').toUpperCase();
-  const regionCode = /^[A-Z]{2}$/.test(rawRegion) ? rawRegion : 'US';
+  const regionCode = resolveRegion(request);
+  const relevanceLanguage = resolveLanguage(request);
 
   try {
     let items = [];
     if (query) {
+      // Ask YouTube for a larger relevance-ranked pool, then remove only videos
+      // that cannot be embedded. Do not force the Music category: mixed searches
+      // such as "poetry music" often contain relevant videos in other categories.
+      const searchPoolSize = Math.min(MAX_SEARCH_POOL, Math.max(24, maxResults * 2));
       const searchPayload = await youtube('search', {
         part: 'snippet',
         q: query,
         type: 'video',
-        maxResults: String(maxResults),
+        maxResults: String(searchPoolSize),
         order: 'relevance',
         safeSearch: 'moderate',
-        videoCategoryId: '10',
         videoEmbeddable: 'true',
-        videoSyndicated: 'true',
         regionCode,
+        relevanceLanguage,
       }, key);
+
       items = Array.isArray(searchPayload.items) ? searchPayload.items : [];
       const ids = items.map((item) => item.id?.videoId).filter(Boolean);
       if (ids.length) {
@@ -116,12 +146,20 @@ export default async function handler(request, response) {
     const videos = items
       .filter((item) => item.status?.privacyStatus !== 'private' && item.status?.embeddable !== false)
       .map(normalizeVideo)
-      .filter(Boolean);
+      .filter(Boolean)
+      .slice(0, maxResults);
 
+    response.setHeader('Vary', 'Accept-Language, X-Vercel-IP-Country');
     response.setHeader('Cache-Control', serverKey
-      ? (query ? 'public, max-age=30, s-maxage=120, stale-while-revalidate=300' : 'public, max-age=60, s-maxage=600, stale-while-revalidate=1800')
+      ? (query ? 'public, max-age=20, s-maxage=90, stale-while-revalidate=180' : 'public, max-age=60, s-maxage=600, stale-while-revalidate=1800')
       : 'private, no-store');
-    return response.status(200).json({ videos, query, regionCode, serverConfigured: Boolean(serverKey) });
+    return response.status(200).json({
+      videos,
+      query,
+      regionCode,
+      relevanceLanguage,
+      serverConfigured: Boolean(serverKey),
+    });
   } catch (error) {
     const status = Number(error?.status) || 502;
     return response.status(status).json({ error: error instanceof Error ? error.message : 'Could not reach YouTube.' });
