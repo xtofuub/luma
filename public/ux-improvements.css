@@ -30,11 +30,18 @@
     width: 100%;
   }
 
+  /* Use the freed library space when the left panel is hidden. */
   .app:not(.focus-mode) .page-layout.library-hidden,
   html.luma-hide-library .app:not(.focus-mode) .page-layout {
-    width: min(760px, calc(100% - 48px));
-    grid-template-columns: minmax(0, 760px);
+    width: min(980px, calc(100% - 48px));
+    grid-template-columns: minmax(0, 980px);
     justify-content: center;
+  }
+
+  .app:not(.focus-mode) .page-layout.library-hidden .writing-page,
+  html.luma-hide-library .app:not(.focus-mode) .page-layout .writing-page {
+    grid-column: 1;
+    width: 100%;
   }
 }
 
@@ -42,16 +49,22 @@
 @media (min-width: 901px) and (max-width: 1308px) {
   .library-toggle { display: inline-flex; }
 
-  .page-layout,
-  .page-layout.library-hidden,
-  html.luma-hide-library .page-layout {
+  .page-layout {
     width: min(760px, calc(100% - 48px));
     grid-template-columns: 1fr;
     justify-content: center;
     gap: 0;
   }
 
-  .writing-page { grid-column: 1; }
+  .page-layout.library-hidden,
+  html.luma-hide-library .page-layout {
+    width: min(980px, calc(100% - 48px));
+    grid-template-columns: 1fr;
+    justify-content: center;
+    gap: 0;
+  }
+
+  .writing-page { grid-column: 1; width: 100%; }
 
   .library-panel {
     position: fixed;
