@@ -1,6 +1,7 @@
 const YOUTUBE_API = 'https://www.googleapis.com/youtube/v3';
-const MAX_RESULTS = 15;
-const MAX_SEARCH_POOL = 40;
+const MAX_RESULTS = 50;
+const DEFAULT_RESULTS = 30;
+const MAX_SEARCH_POOL = 50;
 
 function decodeEntities(value = '') {
   return String(value)
@@ -51,12 +52,12 @@ function resolveRegion(request) {
 }
 
 function resolveLanguage(request) {
-  const requested = String(firstValue(request.query?.language) || '').trim().toLowerCase();
-  if (/^[a-z]{2,3}$/.test(requested)) return requested;
+  const requested = String(firstValue(request.query?.language) || '').trim();
+  if (/^[a-z]{2,3}(?:-[A-Za-z]{2,4})?$/.test(requested)) return requested;
 
   const acceptLanguage = String(firstHeader(request.headers['accept-language']) || '');
-  const browserLanguage = acceptLanguage.split(',')[0]?.trim().split('-')[0]?.toLowerCase();
-  return /^[a-z]{2,3}$/.test(browserLanguage || '') ? browserLanguage : 'en';
+  const browserLanguage = acceptLanguage.split(',')[0]?.trim();
+  return /^[a-z]{2,3}(?:-[A-Za-z]{2,4})?$/.test(browserLanguage || '') ? browserLanguage : 'en';
 }
 
 async function youtube(path, params, key) {
@@ -98,25 +99,23 @@ export default async function handler(request, response) {
 
   const query = String(firstValue(request.query?.q) || '').trim().slice(0, 120);
   const requestedLimit = Number(firstValue(request.query?.limit));
-  const maxResults = Math.min(MAX_RESULTS, Math.max(1, Number.isFinite(requestedLimit) ? requestedLimit : 12));
+  const maxResults = Math.min(MAX_RESULTS, Math.max(1, Number.isFinite(requestedLimit) ? requestedLimit : DEFAULT_RESULTS));
   const regionCode = resolveRegion(request);
   const relevanceLanguage = resolveLanguage(request);
 
   try {
     let items = [];
     if (query) {
-      // Ask YouTube for a larger relevance-ranked pool, then remove only videos
-      // that cannot be embedded. Do not force the Music category: mixed searches
-      // such as "poetry music" often contain relevant videos in other categories.
-      const searchPoolSize = Math.min(MAX_SEARCH_POOL, Math.max(24, maxResults * 2));
+      // Keep YouTube's relevance order and ask for the largest allowed page.
+      // Filtering happens only after details are fetched, so playable results retain
+      // their original relative position instead of being re-ranked by Luma.
       const searchPayload = await youtube('search', {
         part: 'snippet',
         q: query,
         type: 'video',
-        maxResults: String(searchPoolSize),
+        maxResults: String(MAX_SEARCH_POOL),
         order: 'relevance',
-        safeSearch: 'moderate',
-        videoEmbeddable: 'true',
+        safeSearch: 'none',
         regionCode,
         relevanceLanguage,
       }, key);
@@ -158,6 +157,8 @@ export default async function handler(request, response) {
       query,
       regionCode,
       relevanceLanguage,
+      requested: maxResults,
+      searched: query ? MAX_SEARCH_POOL : maxResults,
       serverConfigured: Boolean(serverKey),
     });
   } catch (error) {
